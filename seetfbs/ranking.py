@@ -42,7 +42,7 @@ class PositionScoring(object):
     def run(self, pattern_collection):
         assert isinstance(pattern_collection, PatternCollection)
 
-        ntscore = PositionScoreMatrix()
+        ntscore = PositionScoreMatrix(weight=1)
         for i in pattern_collection:
             for pnum, index in i.matchtable.pindex.match.iteritems():
                 for j in index:
@@ -60,18 +60,18 @@ class PositionScoring(object):
 
 class PositionScoreMatrix(object):
 
-    def __init__(self):
+    def __init__(self, weight=1):
         self.matrix = {}
-        pass
+        self.weight = weight
 
     def add(self, pnum, index):
         if pnum in self.matrix:
             if index in self.matrix.get(pnum):
-                self.matrix.get(pnum)[index] += 1
+                self.matrix.get(pnum)[index] += self.weight
             else:
-                self.matrix.get(pnum).update({index: 1})
+                self.matrix.get(pnum).update({index: self.weight})
         else:
-            self.matrix.update({pnum: {index: 1}})
+            self.matrix.update({pnum: {index: self.weight}})
 
     def get(self, pnum, index):
         if pnum not in self.matrix or index not in self.matrix.get(pnum):
