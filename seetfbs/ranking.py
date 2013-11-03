@@ -1,142 +1,80 @@
-import re
-from math import sqrt
-from seqio import revcomp
+from match import sqrt
+from basic import Pattern, MatchTable, PatternCollection
 
 
-class Pattern(object):
-
-    def __init__(self, sequence, reverse=True):
-        self._reverse = reverse
-        self.sequence = sequence
-        self.num_wildcard = sequence.count('n')
-        self.num_nonwildcard = len(sequence) - self.num_wildcard
-        if reverse:
-            self._re = re.compile('%s|%s' % (self.sequence.replace('n', '[atcg]'),
-                                             revcomp(self.sequence).replace('n', '[atcg]')),
-                                  re.IGNORECASE)
-        else:
-            self._re = re.compile(self.sequence.replace('n', '[atcg]'), re.IGNORECASE)
-        self.ranking_score = None
-        self.sd = None
-        self.sp = None
-        self._sp_match = 0
-        self._sp_match_index = []
-        self._sp_match_score = 0
-        self.sc = None
-
-    def finditer(self, sequence):
-        return self._re.finditer(sequence)
-
-    def preferential_occurrence(self, pset, nset):
-        num_ps = 0
-        num_ns = 0
-        total = 0
-
-        for i in pset:
-            total += 1
-            if self.re.search(i):
-                num_ps += 1
-
-        for i in nset:
-            total += 1
-            if self.re.search(i):
-                num_ns += 1
-
-        if num_ps == 0 or num_ns == 0:
-            return None
-
-        fp = float(num_ns) / total
-        fn = float(num_ps) / total
-        f = float(num_ps * fp + num_ns * fn) / (num_ps + num_ns)
-        z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / num_ps + 1.0 / num_ns))
-
-        self.sd = z_score
-
-    def pfm(self, pset):
-        """Claculate position frequency matrix (PFM)"""
-        matrix = {
-            'A': [0] * len(self.sequence),
-            'T': [0] * len(self.sequence),
-            'C': [0] * len(self.sequence),
-            'G': [0] * len(self.sequence),
-        }
-        for i in pset:
-            for match in self.finditer(i):
-                subseq = i[match.start(): match.end()].upper()
-                for i, j in enumerate(subseq):
-                    matrix.get(j)[i] += 1
-
-        return matrix
-
-
-class PatternCollect(object):
-    """A collection of unique pattern objects for
-    pattern ranking"""
+class PreferentialOccurrence(object):
+    """Calculate z-score of the pattern(s) in the positive set
+    and the negative set"""
 
     def __init__(self):
-        self._collect = {}
+        self.results = {}
 
-    def __iter__(self):
-        return self._collect.itervalues()
-
-    def __len__(self):
-        return len(self._collect)
-
-    def add(self, pattern):
-        """Add a pattern object"""
+    def run(self, pattern, append=False):
         assert isinstance(pattern, Pattern)
+        assert isinstance(pattern.matchtable, MatchTable)
 
-        if self._reverse and revcomp(pattern.sequence) in self._collect:
-            self._collect.update({revcomp(pattern.sequence): pattern})
+        if not append:
+            self.results = {}
+
+        mtable = pattern.matchtable
+        fp = float(mtable.pmatch) / mtable.pnum
+        fn = float(mtable.nmatch) / mtable.nnum
+        f = float(mtable.pmatch * fp + mtable.nmatch * fn) / (mtable.pmatch + mtable.nmatch)
+        z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / mtable.pmatch + 1.0 / mtable.nmatch))
+
+        self.results.update({pattern.sequence: z_score})
+
+    def batch_run(self, pattern_collection, append=False):
+        assert isinstance(pattern_collection, PatternCollection)
+
+        if not append:
+            self.results = {}
+
+        for i in pattern_collection:
+            self.run(i)
+
+
+class PositionScoring(object):
+
+    def __init__(self):
+        self.results = {}
+
+    def run(self, pattern_collection):
+        assert isinstance(pattern_collection, PatternCollection)
+
+        ntscore = PositionScoreMatrix()
+        for i in pattern_collection:
+            for pnum, index in i.matchtable.pindex.match.iteritems():
+                for j in index:
+                    ntscore.add(pnum, j)
+
+        for i in pattern_collection:
+            match_score = 0
+            for pnum, index in i.matchtable.pindex.match.iteritems():
+                for j in index:
+                    match_score += ntscore.get(pnum, index)
+
+            score = float(match_score) / (i.matchtable.pnum * i.num_nonwildcard)
+            self.results.update({i.sequence: score})
+
+
+class PositionScoreMatrix(object):
+
+    def __init__(self):
+        self.matrix = {}
+        pass
+
+    def add(self, pnum, index):
+        if pnum in self.matrix:
+            if index in self.matrix.get(pnum):
+                self.matrix.get(pnum)[index] += 1
+            else:
+                self.matrix.get(pnum).update({index: 1})
         else:
-            self._collect.update({pattern.sequence: pattern})
+            self.matrix.update({pnum: {index: 1}})
 
-    def preferential_occurrence(self, pset, nset):
-        for i in self:
-            i.preferential_occurrence(pset, nset)
-
-    def position_scoring(self, pset):
-        for sequence in pset:
-            ntscore = {i: 0 for i in range(len(sequence))}
-            for pattern in self:
-                has_match = False
-                for match in pattern.finditer(sequence):
-                    has_match = True
-                    for i, j in enumerate(pattern.sequence):
-                        if j != 'n':
-                            ntscore[match.start() + i] += 1
-                            pattern._sp_match_index.append(match.start() + i)
-                if has_match:
-                    pattern._sp_match += 1
-            for pattern in self:
-                for i in pattern._sp_match_index:
-                    pattern._sp_match_score += ntscore.get(i)
-                pattern._sp_match_index = []
-        for pattern in self:
-            pattern.sp = float(pattern._sp_match_score) / (pattern._sp_match * pattern.num_nonwildcard)
-
-    def pattern_scoring(self, sp_weight=1):
-        for pattern in self:
-            pattern.score = pattern.sd * (pattern.sp ** sp_weight)
-
-    def clustering(self, max_cluster=5, similarity=0.8):
-        ranked_patterns = sorted(self, key=lambda x: x.score, reverse=True)
-        clusters = [0] * len(self)
-        clustered_patterns = {}
-        num_cluster = 0
-
-        for i in len(self):
-            if num_cluster == max_cluster:
-                break
-            if clusters[i] == 0:
-                num_cluster += 1
-                clusters[i] = num_cluster
-                clustered_patterns.update({num_cluster: [ranked_patterns[i]]})
-                for j in range(i + 1, len(self)):
-                    if position_weight_matrix(ranked_patterns[i], ranked_patterns[j]) >= similarity:
-                        clusters[j] = num_cluster
-                        clustered_patterns.get(i).append(ranked_patterns[j])
-
-
-def position_weight_matrix(pfm1, pfm2):
-    pass
+    def get(self, pnum, index):
+        if pnum not in self.matrix or index not in self.matrix.get(pnum):
+            return 0
+        else:
+            return self.matrix.get(pnum).get(index)
