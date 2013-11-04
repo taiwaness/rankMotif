@@ -1,6 +1,5 @@
 import re
 from seqio import revcomp
-from matrix import position_weight_matrix
 
 
 class Pattern(object):
@@ -15,22 +14,6 @@ class Pattern(object):
         self.matchtable = MatchTable(self, reverse_complement)
         self.matchtable.index_pset(pset, append)
         self.matchtable.index_nset(nset, append)
-
-    # def pfm(self, pset):
-    #     """Claculate position frequency matrix (PFM)"""
-    #     matrix = {
-    #         'A': [0] * len(self.sequence),
-    #         'T': [0] * len(self.sequence),
-    #         'C': [0] * len(self.sequence),
-    #         'G': [0] * len(self.sequence),
-    #     }
-    #     for i in pset:
-    #         for match in self.finditer(i):
-    #             subseq = i[match.start(): match.end()].upper()
-    #             for i, j in enumerate(subseq):
-    #                 matrix.get(j)[i] += 1
-
-    #     return matrix
 
 
 class MatchTable(object):
@@ -172,25 +155,3 @@ class PatternCollection(object):
     def build(self, pset, nset, reverse_complement=False, append=False):
         for i in self:
             i.build(pset, nset, reverse_complement, append)
-
-    # def pattern_scoring(self, sp_weight=1):
-    #     for pattern in self:
-    #         pattern.score = pattern.sd * (pattern.sp ** sp_weight)
-
-    # def clustering(self, max_cluster=5, similarity=0.8):
-    #     ranked_patterns = sorted(self, key=lambda x: x.score, reverse=True)
-    #     clusters = [0] * len(self)
-    #     clustered_patterns = {}
-    #     num_cluster = 0
-
-    #     for i in len(self):
-    #         if num_cluster == max_cluster:
-    #             break
-    #         if clusters[i] == 0:
-    #             num_cluster += 1
-    #             clusters[i] = num_cluster
-    #             clustered_patterns.update({num_cluster: [ranked_patterns[i]]})
-    #             for j in range(i + 1, len(self)):
-    #                 if position_weight_matrix(ranked_patterns[i], ranked_patterns[j]) >= similarity:
-    #                     clusters[j] = num_cluster
-    #                     clustered_patterns.get(i).append(ranked_patterns[j])
