@@ -77,7 +77,16 @@ class MatchTable(object):
             self.n_hitsites = 0
             self.n_seqs = 0
 
-        p = re.compile('(%s)|(%s)' % (sequence.replace('n', '[atcg]'), revcomp(sequence).replace('n', '[atcg]')),
+        repl = [
+            ('n', '[atcg]'),
+            ('p', '[at]'),
+            ('q', '[ac]'),
+            ('r', '[ag]'),
+            ('s', '[tc]'),
+            ('u', '[tg]'),
+            ('v', '[cg]'),
+        ]
+        p = re.compile('(%s)|(%s)' % (sequence.replace(*repl), revcomp(sequence).replace(*repl)),
                        re.IGNORECASE)
 
         for i in seqset:
@@ -147,8 +156,8 @@ def merge_pattern(seq_1, seq_2):
     q = {'a', 'c'}
     r = {'a', 'g'}
     s = {'t', 'c'}
-    t = {'t', 'g'}
-    u = {'c', 'g'}
+    u = {'t', 'g'}
+    v = {'c', 'g'}
 
     if len(seq_1) > len(seq_2):
         reference = seq_1
@@ -169,10 +178,10 @@ def merge_pattern(seq_1, seq_2):
                 merged_seq.append('r')
             elif seq_1[i] in s and seq_2[i] in s:
                 merged_seq.append('s')
-            elif seq_1[i] in t and seq_2[i] in t:
-                merged_seq.append('t')
             elif seq_1[i] in u and seq_2[i] in u:
                 merged_seq.append('u')
+            elif seq_1[i] in v and seq_2[i] in v:
+                merged_seq.append('v')
             else:
                 merged_seq.append('n')
         return ''.join(merged_seq)
