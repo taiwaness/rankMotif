@@ -183,7 +183,7 @@ def merge_pattern(seq_1, seq_2):
         score = alignment(scanner, reference[i: i + len(scanner)])
         if score > best_score:
             best_score = score
-            best_match = (scanner, reference[i: i + len(scanner)])
+            best_match = ('%s%s%s' % ('n' * i, scanner, 'n' * (len(reference) - len(scanner) - i)), reference)
 
     return merge_pattern(*best_match)
 
