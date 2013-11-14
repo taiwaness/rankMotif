@@ -1,5 +1,5 @@
-from match import sqrt
-from basic import Pattern, MatchTable, PatternCollection
+from math import sqrt
+from basic import PatternSet
 
 
 class PreferentialOccurrence(object):
@@ -9,78 +9,75 @@ class PreferentialOccurrence(object):
     def __init__(self):
         self.results = {}
 
-    def run(self, pattern, append=False):
-        assert isinstance(pattern, Pattern)
-        assert isinstance(pattern.matchtable, MatchTable)
+    def build(self, pattern_set, append=False):
+        assert isinstance(pattern_set, PatternSet)
 
         if not append:
             self.results = {}
 
-        mtable = pattern.matchtable
-        fp = float(mtable.pmatch) / mtable.pnum
-        fn = float(mtable.nmatch) / mtable.nnum
-        f = float(mtable.pmatch * fp + mtable.nmatch * fn) / (mtable.pmatch + mtable.nmatch)
-        z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / mtable.pmatch + 1.0 / mtable.nmatch))
+        for pattern in PatternSet:
+            mt_p = pattern.matchtable_pset
+            mt_n = pattern.matchtable_nset
 
-        self.results.update({pattern: z_score})
+            fp = float(mt_p.n_hitseqs) / mt_p.n_seqs
+            fn = float(mt_n.n_hitseqs) / mt_n.n_seqs
+            f = float(mt_p.n_hitseqs * fp + mt_n.n_hitseqs * fn) / (mt_p.n_hitseqs + mt_n.n_hitseqs)
+            z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / mt_p.n_hitseqs + 1.0 / mt_n.n_hitseqs))
 
-    def batch_run(self, pattern_collection, append=False):
-        assert isinstance(pattern_collection, PatternCollection)
+            self.results.update({pattern: z_score})
 
-        if not append:
-            self.results = {}
-
-        for i in pattern_collection:
-            self.run(i)
+        return self
 
 
 class PositionScoring(object):
 
+    class PositionScoreMatrix(object):
+
+        def __init__(self, weight=1):
+            self.matrix = {}
+            self.weight = weight
+
+        def add(self, n_seqs, index):
+            if n_seqs in self.matrix:
+                if index in self.matrix.get(n_seqs):
+                    self.matrix.get(n_seqs)[index] += self.weight
+                else:
+                    self.matrix.get(n_seqs).update({index: self.weight})
+            else:
+                self.matrix.update({n_seqs: {index: self.weight}})
+
+        def get(self, n_seqs, index):
+            if n_seqs not in self.matrix or index not in self.matrix.get(n_seqs):
+                return 0
+            else:
+                return self.matrix.get(n_seqs).get(index)
+
     def __init__(self, psm_weight=1):
         self.results = {}
         self.psm_weight = psm_weight
-        self._ntscore = PositionScoreMatrix(weight=psm_weight)
+        self._ntscore = self.PositionScoreMatrix(weight=psm_weight)
 
-    def run(self, pattern_collection, append=False):
-        assert isinstance(pattern_collection, PatternCollection)
+    def build(self, pattern_set, append=False):
+        assert isinstance(pattern_set, PatternSet)
 
         if not append:
-            self._ntscore = PositionScoreMatrix(weight=self.psm_weight)
-        for i in pattern_collection:
-            for pnum, index in i.matchtable.pindex.match.iteritems():
-                for j in index:
-                    self._ntscore.add(pnum, j)
+            self._ntscore = self.PositionScoreMatrix(weight=self.psm_weight)
 
-        for i in pattern_collection:
+        for pattern in pattern_set:
+            for n_pset, indices in pattern.matchtable_pset.pos_matches.iteritems():
+                for index in indices:
+                    self._ntscore.add(n_pset, index)
+
+        for pattern in pattern_set:
             match_score = 0
-            for pnum, index in i.matchtable.pindex.match.iteritems():
-                for j in index:
-                    match_score += self._ntscore.get(pnum, index)
+            for n_pset, indices in pattern.matchtable_pset.pos_matches.iteritems():
+                for index in indices:
+                    match_score += self._ntscore.get(n_pset, index)
 
-            score = float(match_score) / (i.matchtable.pnum * i.num_nonwildcard)
-            self.results.update({i: score})
+            score = float(match_score) / (pattern.matchtable_pset.n_seqs * pattern.n_nonwildcards)
+            self.results.update({pattern: score})
 
-
-class PositionScoreMatrix(object):
-
-    def __init__(self, weight=1):
-        self.matrix = {}
-        self.weight = weight
-
-    def add(self, pnum, index):
-        if pnum in self.matrix:
-            if index in self.matrix.get(pnum):
-                self.matrix.get(pnum)[index] += self.weight
-            else:
-                self.matrix.get(pnum).update({index: self.weight})
-        else:
-            self.matrix.update({pnum: {index: self.weight}})
-
-    def get(self, pnum, index):
-        if pnum not in self.matrix or index not in self.matrix.get(pnum):
-            return 0
-        else:
-            return self.matrix.get(pnum).get(index)
+        return self
 
 
 class PatternScoring(object):
@@ -88,16 +85,22 @@ class PatternScoring(object):
     def __init__(self, sp_weight=1):
         self.results = {}
         self.sp_weight = sp_weight
+        self._poccur = PreferentialOccurrence()
+        self._pscore = PositionScoring()
 
-    def run(self, pattern_collection, append=False):
-        assert isinstance(pattern_collection, PatternCollection)
+    def build(self, pattern_set, append=False):
+        assert isinstance(pattern_set, PatternSet)
+
         if not append:
             self.results = {}
-        prefoccur = PreferentialOccurrence()
-        pscoring = PositionScoring()
-        prefoccur.batch_run(pattern_collection, append)
-        pscoring.run(pattern_collection, append)
+            self._poccur = PreferentialOccurrence()
+            self._pscore = PositionScoring()
 
-        for i, j in prefoccur.results.iteritems():
-            score = j * (pscoring ** self.sp_weight)
-            self.results.update({i: score})
+        self._poccur.build(pattern_set, append)
+        self._pscore.build(pattern_set, append)
+
+        for pattern, score in self._poccur.results.iteritems():
+            pattern_score = score * (self._pscore.get(pattern) ** self.sp_weight)
+            self.results.update({pattern: pattern_score})
+
+        return self

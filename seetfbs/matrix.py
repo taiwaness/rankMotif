@@ -1,14 +1,13 @@
-from basic import Pattern, MatchTable
+from basic import Pattern
 
 
 def position_frequency_matrix(pattern):
     """Claculate position frequency matrix (PFM)
     of matching sequences of a pattern"""
     assert isinstance(pattern, Pattern)
-    assert isinstance(pattern.matchtable, MatchTable)
-    sequences = [i.lower() for i in pattern.matchtable.pindex.match_sequence.itervalues()]
-    lrow = max([len(i) for i in sequences])
 
+    sequences = [i.lower() for i in pattern.matchtable_pset.match_sequences.itervalues()]
+    lrow = max([len(i) for i in sequences])
     matrix = {
         'a': [0] * lrow,
         't': [0] * lrow,

@@ -6,136 +6,118 @@ class Pattern(object):
 
     def __init__(self, sequence):
         self.sequence = sequence
-        self.num_wildcard = sequence.count('n')
-        self.num_nonwildcard = len(sequence) - self.num_wildcard
-        self.matchtable = None
+        self.n_wildcards = sequence.count('n')
+        self.n_nonwildcards = len(sequence) - self.n_wildcards
+        self.matchtable_pset = None
+        self.matchtable_nset = None
 
-    def build(self, pset, nset, reverse_complement=False, append=False):
-        self.matchtable = MatchTable(self, reverse_complement)
-        self.matchtable.index_pset(pset, append)
-        self.matchtable.index_nset(nset, append)
+    def __len__(self):
+        return len(self.sequence)
+
+    def build_matchtable_pset(self, seqset, reverse_complement=False, append=False):
+        if not self.matchtable_pset or not append:
+            self.matchtable_pset = MatchTable(reverse_complement)
+        self.matchtable_pset.index(self.sequence, seqset, append)
+
+        return self
+
+    def build_matchtable_nset(self, seqset, reverse_complement=False, append=False):
+        if not self.matchtable_nset or not append:
+            self.matchtable_nset = MatchTable(reverse_complement)
+        self.matchtable_nset.index(self.sequence, seqset, append)
+
+        return self
 
 
 class MatchTable(object):
-    """Index of a pattern against matching sequences."""
+    """Index of a pattern sequence against the matching sequences"""
 
-    def __init__(self, pattern, reverse_complement=False):
-        assert isinstance(pattern, Pattern)
-        self.pattern = pattern
+    class MatchPosition(object):
+
+        def __init__(self):
+            self.seqid = set()
+            self.pos_matches = {}
+            self.pos_wildcards = {}
+            self.pos_nonwilcards = {}
+            self.match_sequences = {}
+
+        def add(self, seqid, query, hit, hit_start, hit_end, reverse_match=False):
+            if seqid not in self.seqid:
+                self.seqid.add(seqid)
+                self.pos_matches.update({seqid: []})
+                self.pos_wildcards.update({seqid: []})
+                self.pos_nonwildcards.update({seqid: []})
+                self.match_sequences.update({seqid: []})
+            self.pos_matches.get(seqid).append(range(hit_start, hit_end))
+            pos_wildcards = []
+            pos_nonwildcards = []
+            for i, j in enumerate(query):
+                if j == 'n':
+                    pos_wildcards.append(hit_start + i)
+                else:
+                    pos_nonwildcards.append(hit_start + i)
+            self.pos_wildcards.get(seqid).append(pos_wildcards)
+            self.pos_nonwildcards.get(seqid).append(pos_nonwildcards)
+            if reverse_match:
+                self.match_sequences.get(seqid).append(revcomp(hit[hit_start: hit_end]))
+            else:
+                self.match_sequences.get(seqid).append(hit[hit_start: hit_end])
+
+    def __init__(self, reverse_complement=False):
         self.reverse_complement = reverse_complement
-        self.pmatch = 0
-        self.nmatch = 0
-        self.pindex = PatternPositionIndex()
-        self.nindex = PatternPositionIndex()
-        self.pnum = 0
-        self.nnum = 0
+        self._match_position = self.MatchPosition()
+        self.n_hitseqs = 0
+        self.n_hitsites = 0
+        self.n_seqs = 0
 
-    def index_pset(self, pset, append=False):
+    def index(self, sequence, seqset, append=False):
         if not append:
-            self.pmatch = 0
-            self.pindex = PatternPositionIndex()
-            self.pnum = 0
-        p = re.compile(self.pattern.sequence.replace('n', '[atcg]'),
+            self._match_position = self.MatchPosition()
+            self.n_hitseqs = 0
+            self.n_hitsites = 0
+            self.n_seqs = 0
+
+        p = re.compile('(%s)|(%s)' % (sequence.replace('n', '[atcg]'), revcomp(sequence).replace('n', '[atcg]')),
                        re.IGNORECASE)
-        prc = re.compile('%s' % (revcomp(self.pattern.sequence).replace('n', '[atcg]')),
-                         re.IGNORECASE)
 
-        for i in pset:
-            self.pnum += 1
+        for i in seqset:
+            self.n_seqs += 1
             has_match = False
-            if self.reverse_complement:
-                for j in prc.finditer(i):
-                    has_match = True
-                    self.pindex.append(self.pnum,
-                                       self.pattern.sequence,
-                                       i,
-                                       j.start(),
-                                       j.end() - 1,
-                                       self.reverse_complement)
-            else:
-                for j in p.finditer(i):
-                    self.pindex.append(self.pnum,
-                                       self.pattern.sequence,
-                                       i,
-                                       j.start(),
-                                       j.end() - 1,
-                                       self.reverse_complement)
-
+            for j in p.finditer(i):
+                has_match = True
+                self.n_hitsites += 1
+                if self.reverse_complement:
+                    if j.group(1):
+                        self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
+                    elif j.group(2):
+                        self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), True)
+                elif j.group(1):
+                    self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
             if has_match:
-                self.pmatch += 1
+                self.n_hitseqs += 1
 
-    def index_nset(self, nset, append=False):
-        if not append:
-            self.nmatch = 0
-            self.nindex = PatternPositionIndex()
-            self.nnum = 0
-        p = re.compile(self.pattern.sequence.replace('n', '[atcg]'),
-                       re.IGNORECASE)
-        prc = re.compile('%s' % (revcomp(self.pattern.sequence).replace('n', '[atcg]')),
-                         re.IGNORECASE)
+    @property
+    def seqid(self):
+        return self._match_position.seqid
 
-        for i in nset:
-            self.nnum += 1
-            has_match = False
-            if self.reverse_complement:
-                for j in prc.finditer(i):
-                    has_match = True
-                    self.nindex.append(self.nnum,
-                                       self.pattern.sequence,
-                                       i,
-                                       j.start(),
-                                       j.end() - 1,
-                                       self.reverse_complement)
-            else:
-                for j in p.finditer(i):
-                    self.nindex.append(self.nnum,
-                                       self.pattern.sequence,
-                                       i,
-                                       j.start(),
-                                       j.end() - 1,
-                                       self.reverse_complement)
+    @property
+    def pos_wildcards(self):
+        return self._match_position.pos_wildcards
 
-            if has_match:
-                self.nmatch += 1
+    @property
+    def pos_nonwilcards(self):
+        return self._match_position.pos_nonwilcards
+
+    @property
+    def match_sequences(self):
+        return self._match_position.match_sequences
 
 
-class PatternPositionIndex(object):
+class PatternSet(object):
+    """A set of pattern objects without redundant pattern sequences"""
 
-    def __init__(self):
-        self.seqid = set()
-        self.match = {}
-        self.match_wildcard = {}
-        self.match_nonwilcard = {}
-        self.match_sequence = {}
-
-    def append(self, seqid, query, hit, hit_start, hit_end, reverse_complement=False):
-        if seqid not in self.seqid:
-            self.seqid.add(seqid)
-            self.match.update({seqid: []})
-            self.match_wildcard.update({seqid: []})
-            self.match_nonwildcard.update({seqid: []})
-            self.match_sequence.update({seqid: []})
-        self.match.get(seqid).append(range(hit_start, hit_end + 1))
-        wildcard = []
-        nonwildcard = []
-        for i, j in enumerate(query):
-            if j == 'n':
-                wildcard.append(hit_start + i)
-            else:
-                nonwildcard.append(hit_start + i)
-        self.match_wildcard.get(seqid).append(wildcard)
-        self.match_nonwildcard.get(seqid).append(nonwildcard)
-        if reverse_complement:
-            self.match_sequence.get(seqid).append(revcomp(hit[hit_start: hit_end + 1]))
-        else:
-            self.match_sequence.get(seqid).append(hit[hit_start: hit_end + 1])
-
-
-class PatternCollection(object):
-    """A collection of unique pattern objects for
-    pattern ranking"""
-
-    def __init__(self):
+    def __init__(self, reverse_complement=False):
+        self.reverse_complement = reverse_complement
         self._collect = {}
 
     def __iter__(self):
@@ -144,14 +126,72 @@ class PatternCollection(object):
     def __len__(self):
         return len(self._collect)
 
-    def add(self, pattern, reverse_complement=False):
-        """Add a pattern object"""
+    def add(self, pattern):
         assert isinstance(pattern, Pattern)
-        if reverse_complement and revcomp(pattern.sequence) in self._collect:
+        if self.reverse_complement and revcomp(pattern.sequence) in self._collect:
             self._collect.update({revcomp(pattern.sequence): pattern})
         else:
             self._collect.update({pattern.sequence: pattern})
 
-    def build(self, pset, nset, reverse_complement=False, append=False):
-        for i in self:
-            i.build(pset, nset, reverse_complement, append)
+    def iterseqs(self):
+        return self._collect.iterkeys()
+
+    def remove(self, sequence):
+        self._collect.pop(sequence)
+
+
+def merge_pattern(seq_1, seq_2):
+    """Merge several pattarns and return the matching sequences"""
+
+    p = {'a', 't'}
+    q = {'a', 'c'}
+    r = {'a', 'g'}
+    s = {'t', 'c'}
+    t = {'t', 'g'}
+    u = {'c', 'g'}
+
+    if len(seq_1) > len(seq_2):
+        reference = seq_1
+        scanner = seq_2
+    elif len(seq_1) < len(seq_2):
+        reference = seq_2
+        scanner = seq_1
+    else:
+        merged_seq = []
+        for i in range(len(seq_1)):
+            if seq_1[i] == seq_2[i]:
+                merged_seq.append(seq_1[i])
+            elif seq_1[i] in p and seq_2[i] in p:
+                merged_seq.append('p')
+            elif seq_1[i] in q and seq_2[i] in q:
+                merged_seq.append('q')
+            elif seq_1[i] in r and seq_2[i] in r:
+                merged_seq.append('r')
+            elif seq_1[i] in s and seq_2[i] in s:
+                merged_seq.append('s')
+            elif seq_1[i] in t and seq_2[i] in t:
+                merged_seq.append('t')
+            elif seq_1[i] in u and seq_2[i] in u:
+                merged_seq.append('u')
+            else:
+                merged_seq.append('n')
+        return ''.join(merged_seq)
+
+    best_score = -1
+    best_match = None
+    for i in range(len(reference) - len(scanner) + 1):
+        score = alignment(scanner, reference[i: i + len(scanner)])
+        if score > best_score:
+            best_score = score
+            best_match = (scanner, reference[i: i + len(scanner)])
+
+    return merge_pattern(*best_match)
+
+
+def alignment(seq_1, seq_2):
+    assert len(seq_1) == len(seq_2)
+
+    score = 0
+    for i in range(len(seq_1)):
+        if seq_1[i] == seq_2[i]:
+            score += 1
