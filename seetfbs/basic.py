@@ -86,8 +86,13 @@ class MatchTable(object):
             ('u', '[tg]'),
             ('v', '[cg]'),
         ]
-        p = re.compile('(%s)|(%s)' % (sequence.replace(*repl), revcomp(sequence).replace(*repl)),
-                       re.IGNORECASE)
+        seq_retype = sequence
+        rcseq_retype = revcomp(sequence)
+        for i in repl:
+            seq_retype = seq_retype.replace(*i)
+            rcseq_retype = rcseq_retype.replace(*i)
+
+        p = re.compile('(%s)|(%s)' % (seq_retype, rcseq_retype), re.IGNORECASE)
 
         for i in seqset:
             self.n_seqs += 1
