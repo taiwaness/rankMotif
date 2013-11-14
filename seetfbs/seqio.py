@@ -10,11 +10,13 @@ def revcomp(sequence):
         'T': 'A',
         'C': 'G',
         'G': 'C',
-        'n': 'n',
     }
 
     rcseq = []
     for i in sequence[::-1]:
-        rcseq.append(table.get(i))
+        if i in table:
+            rcseq.append(table.get(i))
+        else:
+            rcseq.append(i)
 
     return ''.join(rcseq)
