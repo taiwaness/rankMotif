@@ -38,7 +38,7 @@ class MatchTable(object):
             self.seqid = set()
             self.pos_matches = {}
             self.pos_wildcards = {}
-            self.pos_nonwilcards = {}
+            self.pos_nonwildcards = {}
             self.match_sequences = {}
 
         def add(self, seqid, query, hit, hit_start, hit_end, reverse_match=False):
@@ -115,6 +115,10 @@ class MatchTable(object):
         return self._match_position.seqid
 
     @property
+    def pos_matches(self):
+        return self._match_position.pos_matches
+
+    @property
     def pos_wildcards(self):
         return self._match_position.pos_wildcards
 
@@ -154,58 +158,62 @@ class PatternSet(object):
         self._collect.pop(sequence)
 
 
-def merge_pattern(seq_1, seq_2):
+class MergePattern(object):
     """Merge several pattarns and return the matching sequences"""
 
-    p = {'a', 't'}
-    q = {'a', 'c'}
-    r = {'a', 'g'}
-    s = {'t', 'c'}
-    u = {'t', 'g'}
-    v = {'c', 'g'}
+    def __init__(self):
+        pass
 
-    if len(seq_1) > len(seq_2):
-        reference = seq_1
-        scanner = seq_2
-    elif len(seq_1) < len(seq_2):
-        reference = seq_2
-        scanner = seq_1
-    else:
-        merged_seq = []
+    def merge(self, seq_1, seq_2):
+        p = {'a', 't'}
+        q = {'a', 'c'}
+        r = {'a', 'g'}
+        s = {'t', 'c'}
+        u = {'t', 'g'}
+        v = {'c', 'g'}
+
+        if len(seq_1) > len(seq_2):
+            reference = seq_1
+            scanner = seq_2
+        elif len(seq_1) < len(seq_2):
+            reference = seq_2
+            scanner = seq_1
+        else:
+            merged_seq = []
+            for i in range(len(seq_1)):
+                if seq_1[i] == seq_2[i]:
+                    merged_seq.append(seq_1[i])
+                elif seq_1[i] in p and seq_2[i] in p:
+                    merged_seq.append('p')
+                elif seq_1[i] in q and seq_2[i] in q:
+                    merged_seq.append('q')
+                elif seq_1[i] in r and seq_2[i] in r:
+                    merged_seq.append('r')
+                elif seq_1[i] in s and seq_2[i] in s:
+                    merged_seq.append('s')
+                elif seq_1[i] in u and seq_2[i] in u:
+                    merged_seq.append('u')
+                elif seq_1[i] in v and seq_2[i] in v:
+                    merged_seq.append('v')
+                else:
+                    merged_seq.append('n')
+            return ''.join(merged_seq)
+
+        best_score = -1
+        best_match = None
+        for i in range(len(reference) - len(scanner) + 1):
+            scanner_extended = '%s%s%s' % ('n' * i, scanner, 'n' * (len(reference) - len(scanner) - i))
+            score = self.alignment(scanner_extended, reference[i: i + len(scanner)])
+            if score > best_score:
+                best_score = score
+                best_match = (scanner_extended, reference)
+
+        return self.merge_pattern(*best_match)
+
+    def alignment(seq_1, seq_2):
+        assert len(seq_1) == len(seq_2)
+
+        score = 0
         for i in range(len(seq_1)):
             if seq_1[i] == seq_2[i]:
-                merged_seq.append(seq_1[i])
-            elif seq_1[i] in p and seq_2[i] in p:
-                merged_seq.append('p')
-            elif seq_1[i] in q and seq_2[i] in q:
-                merged_seq.append('q')
-            elif seq_1[i] in r and seq_2[i] in r:
-                merged_seq.append('r')
-            elif seq_1[i] in s and seq_2[i] in s:
-                merged_seq.append('s')
-            elif seq_1[i] in u and seq_2[i] in u:
-                merged_seq.append('u')
-            elif seq_1[i] in v and seq_2[i] in v:
-                merged_seq.append('v')
-            else:
-                merged_seq.append('n')
-        return ''.join(merged_seq)
-
-    best_score = -1
-    best_match = None
-    for i in range(len(reference) - len(scanner) + 1):
-        score = alignment(scanner, reference[i: i + len(scanner)])
-        if score > best_score:
-            best_score = score
-            best_match = ('%s%s%s' % ('n' * i, scanner, 'n' * (len(reference) - len(scanner) - i)), reference)
-
-    return merge_pattern(*best_match)
-
-
-def alignment(seq_1, seq_2):
-    assert len(seq_1) == len(seq_2)
-
-    score = 0
-    for i in range(len(seq_1)):
-        if seq_1[i] == seq_2[i]:
-            score += 1
+                score += 1
