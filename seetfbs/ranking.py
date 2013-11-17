@@ -21,8 +21,8 @@ class PreferentialOccurrence(object):
 
             fp = float(mt_p.n_hitseqs) / mt_p.n_seqs
             fn = float(mt_n.n_hitseqs) / mt_n.n_seqs
-            f = float(mt_p.n_hitseqs * fp + mt_n.n_hitseqs * fn) / (mt_p.n_hitseqs + mt_n.n_hitseqs)
-            z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / mt_p.n_hitseqs + 1.0 / mt_n.n_hitseqs))
+            f = float(mt_p.n_seqs * fp + mt_n.n_seqs * fn) / (mt_p.n_seqs + mt_n.n_seqs)
+            z_score = (fp - fn) / sqrt(f * (1 - f) * (1.0 / mt_p.n_seqs + 1.0 / mt_n.n_seqs))
 
             self.results.update({pattern: z_score})
 
@@ -31,50 +31,50 @@ class PreferentialOccurrence(object):
 
 class PositionScoring(object):
 
-    class PositionScoreMatrix(object):
+    class _PositionScoreMatrix(object):
 
-        def __init__(self, weight=1):
+        def __init__(self):
             self.matrix = {}
-            self.weight = weight
 
-        def add(self, n_seqs, index):
-            if n_seqs in self.matrix:
-                if index in self.matrix.get(n_seqs):
-                    self.matrix.get(n_seqs)[index] += self.weight
+        def add(self, seqid, index):
+            if seqid in self.matrix:
+                if index in self.matrix.get(seqid):
+                    self.matrix.get(seqid)[index] += 1
                 else:
-                    self.matrix.get(n_seqs).update({index: self.weight})
+                    self.matrix.get(seqid).update({index: 1})
             else:
-                self.matrix.update({n_seqs: {index: self.weight}})
+                self.matrix.update({seqid: {index: 1}})
 
-        def get(self, n_seqs, index):
-            if n_seqs not in self.matrix or index not in self.matrix.get(n_seqs):
+        def get(self, seqid, index):
+            if seqid not in self.matrix or index not in self.matrix.get(seqid):
                 return 0
             else:
-                return self.matrix.get(n_seqs).get(index)
+                return self.matrix.get(seqid).get(index)
 
-    def __init__(self, psm_weight=1):
+    def __init__(self):
         self.results = {}
-        self.psm_weight = psm_weight
-        self._ntscore = self.PositionScoreMatrix(weight=psm_weight)
+        self._ntscore = self._PositionScoreMatrix()
 
     def build(self, pattern_set, append=False):
         assert isinstance(pattern_set, PatternSet)
 
         if not append:
-            self._ntscore = self.PositionScoreMatrix(weight=self.psm_weight)
+            self._ntscore = self._PositionScoreMatrix()
 
+        # Calculate accumulative scores
         for pattern in pattern_set:
-            for n_pset, indices in pattern.matchtable_pset.pos_matches.iteritems():
+            for seqid, indices in pattern.matchtable_pset.pos_nonwildcards.iteritems():
                 for index in indices:
-                    self._ntscore.add(n_pset, index)
+                    self._ntscore.add(seqid, index)
 
+        # Assign scores to each pattern
         for pattern in pattern_set:
             match_score = 0
-            for n_pset, indices in pattern.matchtable_pset.pos_matches.iteritems():
+            for seqid, indices in pattern.matchtable_pset.pos_nonwildcards.iteritems():
                 for index in indices:
-                    match_score += self._ntscore.get(n_pset, index)
+                    match_score += self._ntscore.get(seqid, index)
 
-            score = float(match_score) / (pattern.matchtable_pset.n_seqs * pattern.n_nonwildcards)
+            score = float(match_score) / (pattern.matchtable_pset.n_hitseqs * pattern.n_nonwildcards)
             self.results.update({pattern: score})
 
         return self

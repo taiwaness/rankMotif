@@ -32,7 +32,7 @@ class Pattern(object):
 class MatchTable(object):
     """Index of a pattern sequence against the matching sequences"""
 
-    class MatchPosition(object):
+    class _MatchPosition(object):
 
         def __init__(self):
             self.seqid = set()
@@ -41,7 +41,7 @@ class MatchTable(object):
             self.pos_nonwildcards = {}
             self.match_sequences = {}
 
-        def add(self, seqid, query, hit, hit_start, hit_end, reverse_match=False):
+        def add(self, seqid, query, hit, hit_start, hit_end, is_rc_match):
             if seqid not in self.seqid:
                 self.seqid.add(seqid)
                 self.pos_matches.update({seqid: []})
@@ -58,41 +58,31 @@ class MatchTable(object):
                     pos_nonwildcards.append(hit_start + i)
             self.pos_wildcards.get(seqid).append(pos_wildcards)
             self.pos_nonwildcards.get(seqid).append(pos_nonwildcards)
-            if reverse_match:
-                self.match_sequences.get(seqid).append(revcomp(hit[hit_start: hit_end]))
+            if is_rc_match:
+                mseq = (2, hit[hit_start: hit_end])
+                self.match_sequences.get(seqid).append(mseq)
             else:
-                self.match_sequences.get(seqid).append(hit[hit_start: hit_end])
+                mseq = (1, hit[hit_start: hit_end])
+                self.match_sequences.get(seqid).append(mseq)
 
     def __init__(self, reverse_complement=False):
         self.reverse_complement = reverse_complement
-        self._match_position = self.MatchPosition()
+        self._match_position = self._MatchPosition()
         self.n_hitseqs = 0
         self.n_hitsites = 0
         self.n_seqs = 0
 
     def index(self, sequence, seqset, append=False):
         if not append:
-            self._match_position = self.MatchPosition()
+            self._match_position = self._MatchPosition()
             self.n_hitseqs = 0
             self.n_hitsites = 0
             self.n_seqs = 0
 
-        repl = [
-            ('n', '[atcg]'),
-            ('p', '[at]'),
-            ('q', '[ac]'),
-            ('r', '[ag]'),
-            ('s', '[tc]'),
-            ('u', '[tg]'),
-            ('v', '[cg]'),
-        ]
-        seq_retype = sequence
-        rcseq_retype = revcomp(sequence)
-        for i in repl:
-            seq_retype = seq_retype.replace(*i)
-            rcseq_retype = rcseq_retype.replace(*i)
-
-        p = re.compile('(%s)|(%s)' % (seq_retype, rcseq_retype), re.IGNORECASE)
+        rc_sequence = revcomp(sequence)
+        p = re.compile('{0}|{1}'.format(
+            sequence.replace('n', '[atcg]'), rc_sequence.replace('n', '[atcg]')),
+            re.IGNORECASE)
 
         for i in seqset:
             self.n_seqs += 1
@@ -104,7 +94,7 @@ class MatchTable(object):
                     if j.group(1):
                         self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
                     elif j.group(2):
-                        self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), True)
+                        self.index.add(self.n_seqset, rc_sequence, i, j.start(), j.end(), True)
                 elif j.group(1):
                     self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
             if has_match:
