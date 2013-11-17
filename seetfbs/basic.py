@@ -5,7 +5,7 @@ from seqio import revcomp
 class Pattern(object):
 
     def __init__(self, sequence):
-        self.sequence = sequence
+        self.sequence = sequence.lower()
         self.n_wildcards = sequence.count('n')
         self.n_nonwildcards = len(sequence) - self.n_wildcards
         self.matchtable_pset = None
@@ -85,6 +85,7 @@ class MatchTable(object):
             re.IGNORECASE)
 
         for i in seqset:
+            i = i.lower()
             self.n_seqs += 1
             has_match = False
             for j in p.finditer(i):
@@ -148,62 +149,46 @@ class PatternSet(object):
         self._collect.pop(sequence)
 
 
-class MergePattern(object):
-    """Merge several pattarns and return the matching sequences"""
+def merge_pattern(pattern_1, pattern_2):
+    seq_1 = pattern_1.sequence
+    seq_2 = pattern_2.sequence
+    arrlen = len(seq_1) + len(seq_2) - 1
 
-    def __init__(self):
-        pass
+    max_score = -1
+    best_seq1 = None
+    best_seq2 = None
+    best_strands = None
 
-    def merge(self, seq_1, seq_2):
-        p = {'a', 't'}
-        q = {'a', 'c'}
-        r = {'a', 'g'}
-        s = {'t', 'c'}
-        u = {'t', 'g'}
-        v = {'c', 'g'}
+    strand_1 = [1, 1]
+    for i in range(arrlen):
+        s1 = '%s%s%s' % ('n' * i, seq_1, 'n' * (arrlen - i - len(seq_1) + 1))
+        s2 = '%s%s%s' % ('n' * (arrlen - i - len(seq_2) + 1), seq_2, 'n' * i)
+        score = full_alignment_scoring(s1, s2)
+        if score > max_score:
+            max_score = score
+            best_seq1 = s1
+            best_seq2 = s2
+            best_strands = strand_1
 
-        if len(seq_1) > len(seq_2):
-            reference = seq_1
-            scanner = seq_2
-        elif len(seq_1) < len(seq_2):
-            reference = seq_2
-            scanner = seq_1
-        else:
-            merged_seq = []
-            for i in range(len(seq_1)):
-                if seq_1[i] == seq_2[i]:
-                    merged_seq.append(seq_1[i])
-                elif seq_1[i] in p and seq_2[i] in p:
-                    merged_seq.append('p')
-                elif seq_1[i] in q and seq_2[i] in q:
-                    merged_seq.append('q')
-                elif seq_1[i] in r and seq_2[i] in r:
-                    merged_seq.append('r')
-                elif seq_1[i] in s and seq_2[i] in s:
-                    merged_seq.append('s')
-                elif seq_1[i] in u and seq_2[i] in u:
-                    merged_seq.append('u')
-                elif seq_1[i] in v and seq_2[i] in v:
-                    merged_seq.append('v')
-                else:
-                    merged_seq.append('n')
-            return ''.join(merged_seq)
+    strand_2 = [2, 1]
+    rc_seq_1 = revcomp(seq_1)
+    for i in range(arrlen):
+        s1 = '%s%s%s' % ('n' * i, rc_seq_1, 'n' * (arrlen - i - len(rc_seq_1) + 1))
+        s2 = '%s%s%s' % ('n' * (arrlen - i - len(seq_2) + 1), seq_2, 'n' * i)
+        score = full_alignment_scoring(s1, s2)
+        if score > max_score:
+            max_score = score
+            best_seq1 = seq_1
+            best_seq2 = seq_2
+            best_strands = strand_2
 
-        best_score = -1
-        best_match = None
-        for i in range(len(reference) - len(scanner) + 1):
-            scanner_extended = '%s%s%s' % ('n' * i, scanner, 'n' * (len(reference) - len(scanner) - i))
-            score = self.alignment(scanner_extended, reference[i: i + len(scanner)])
-            if score > best_score:
-                best_score = score
-                best_match = (scanner_extended, reference)
+    return ((best_strands[0], Pattern(best_seq1)), (best_strands[1], Pattern(best_seq2)))
 
-        return self.merge_pattern(*best_match)
 
-    def alignment(seq_1, seq_2):
-        assert len(seq_1) == len(seq_2)
+def full_alignment_scoring(seq_1, seq_2):
+    assert len(seq_1) == len(seq_2)
 
-        score = 0
-        for i in range(len(seq_1)):
-            if seq_1[i] == seq_2[i]:
-                score += 1
+    score = 0
+    for i in range(len(seq_1)):
+        if seq_1[i] == seq_2[i]:
+            score += 1
