@@ -48,12 +48,14 @@ def main():
     pattern_scoring = PatternScoring(args.sp)
     pattern_scoring.build(pattern_set)
 
-    cluster = Cluster(args.cluster, similarity=0.8)
+    cluster = Cluster(args.cluster, similarity=0.8, reverse_complement=reverse_complement)
     cluster.run(pattern_scoring)
 
-    with open(os.path.join(args.out), 'ranked_patterns.txt', 'w') as fo:
-        for i, j in cluster.results.iteritems():
-            fo.write('{0}: {1}'.format(i, ' '.join([p.sequence for p in j])))
+    with open(os.path.join(args.out, 'ranked_patterns.txt'), 'w') as fo:
+        for i, j in cluster.clustered_patterns.iteritems():
+            for p in j:
+                fo.write('{0}: {1}'.format(i, p.sequence))
+                fo.write('\n')
             fo.flush()
 
 

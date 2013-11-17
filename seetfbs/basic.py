@@ -1,5 +1,5 @@
 import re
-from seqio import revcomp
+from .seqio import revcomp
 
 
 class Pattern(object):
@@ -80,7 +80,7 @@ class MatchTable(object):
             self.n_seqs = 0
 
         rc_sequence = revcomp(sequence)
-        p = re.compile('{0}|{1}'.format(
+        p = re.compile('({0})|({1})'.format(
             sequence.replace('n', '[atcg]'), rc_sequence.replace('n', '[atcg]')),
             re.IGNORECASE)
 
@@ -93,11 +93,11 @@ class MatchTable(object):
                 self.n_hitsites += 1
                 if self.reverse_complement:
                     if j.group(1):
-                        self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
+                        self._match_position.add(self.n_seqs, sequence, i, j.start(), j.end(), False)
                     elif j.group(2):
-                        self.index.add(self.n_seqset, rc_sequence, i, j.start(), j.end(), True)
+                        self._match_position.add(self.n_seqs, rc_sequence, i, j.start(), j.end(), True)
                 elif j.group(1):
-                    self.index.add(self.n_seqset, sequence, i, j.start(), j.end(), False)
+                    self._match_position.add(self.n_seqs, sequence, i, j.start(), j.end(), False)
             if has_match:
                 self.n_hitseqs += 1
 
@@ -114,8 +114,8 @@ class MatchTable(object):
         return self._match_position.pos_wildcards
 
     @property
-    def pos_nonwilcards(self):
-        return self._match_position.pos_nonwilcards
+    def pos_nonwildcards(self):
+        return self._match_position.pos_nonwildcards
 
     @property
     def match_sequences(self):
