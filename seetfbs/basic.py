@@ -159,7 +159,7 @@ def merge_pattern(pattern_1, pattern_2):
     best_seq2 = None
     best_strands = None
 
-    strand_1 = [1, 1]
+    strands_1 = [1, 1]
     for i in range(arrlen):
         s1 = '%s%s%s' % ('n' * i, seq_1, 'n' * (arrlen - i - len(seq_1) + 1))
         s2 = '%s%s%s' % ('n' * (arrlen - i - len(seq_2) + 1), seq_2, 'n' * i)
@@ -168,9 +168,9 @@ def merge_pattern(pattern_1, pattern_2):
             max_score = score
             best_seq1 = s1
             best_seq2 = s2
-            best_strands = strand_1
+            best_strands = strands_1
 
-    strand_2 = [2, 1]
+    strands_2 = [2, 1]
     rc_seq_1 = revcomp(seq_1)
     for i in range(arrlen):
         s1 = '%s%s%s' % ('n' * i, rc_seq_1, 'n' * (arrlen - i - len(rc_seq_1) + 1))
@@ -180,7 +180,7 @@ def merge_pattern(pattern_1, pattern_2):
             max_score = score
             best_seq1 = seq_1
             best_seq2 = seq_2
-            best_strands = strand_2
+            best_strands = strands_2
 
     return ((best_strands[0], Pattern(best_seq1)), (best_strands[1], Pattern(best_seq2)))
 
