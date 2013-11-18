@@ -3,7 +3,7 @@ import subprocess
 from tempfile import NamedTemporaryFile
 from .scoring import PatternScoring
 from .seqio import revcomp
-from .basic import Pattern
+from .basic import Pattern, PatternSet
 
 
 class Cluster(object):
@@ -12,12 +12,12 @@ class Cluster(object):
         self.max_cluster = max_cluster
         self.similarity = similarity
         self.reverse_complement = reverse_complement
-        self.clustered_patterns = {}
+        self.results = {}
 
     def run(self, pattern_scoring):
         isinstance(pattern_scoring, PatternScoring)
 
-        self.clustered_patterns = {}
+        self.results = {}
         ranked_patterns = sorted(
             pattern_scoring.results, key=lambda x: pattern_scoring.results.get(x), reverse=True)
         clusters = [0] * len(pattern_scoring.results)
@@ -29,28 +29,49 @@ class Cluster(object):
             if clusters[i] == 0:
                 n_clusters += 1
                 clusters[i] = n_clusters
-                self.clustered_patterns.update({n_clusters: [ranked_patterns[i]]})
+                self.results.update({n_clusters: [ranked_patterns[i]]})
                 for j in range(i + 1, len(ranked_patterns)):
                     score = sim_pfm(pfm(ranked_patterns[i]), pfm(ranked_patterns[j]), self.reverse_complement)[2]
                     if clusters[j] == 0 and score >= self.similarity:
                         clusters[j] = n_clusters
-                        self.clustered_patterns.get(n_clusters).append(ranked_patterns[j])
+                        self.results.get(n_clusters).append(ranked_patterns[j])
 
         return self
 
 
-def pfm(pattern):
+def pfm(pattern_sequence):
     """Claculate position frequency matrix (PFM)
-    of matching sequences of a pattern"""
-    assert isinstance(pattern, Pattern)
-
+    of matching sequences of a pattern or a pattern set"""
     sequences = []
-    for match_sequences in pattern.matchtable_pset.match_sequences.itervalues():
-        for strand, sequence in match_sequences:
-            if strand == 2:
-                sequences.append(revcomp(sequence))
-            else:
-                sequences.append(sequence)
+    if isinstance(pattern_sequence, Pattern):
+        for match_sequences in pattern_sequence.matchtable_pset.match_sequences.itervalues():
+            for strand, sequence in match_sequences:
+                if strand == 2:
+                    sequences.append(revcomp(sequence))
+                else:
+                    sequences.append(sequence)
+    elif isinstance(pattern_sequence, PatternSet):
+        pos_matches = {}
+        for p in pattern_sequence:
+            for seqid, p_matches in p.matchtable_pset.pos_matches.iteritems():
+                pos = set()
+                if seqid not in pos_matches:
+                    pos_matches.update({seqid: []})
+                for i in range(len(p_matches)):
+                    if p_matches[i] in pos_matches.get(seqid):
+                        continue
+                    else:
+                        if pos.union(set(p_matches[i])) != len(pos) + len(p_matches[i]):
+                            # Two positions overlap
+                            print('Two positions overlap. This is a bug to be fixed')
+                            print(pos)
+                            print(p_matches[i])
+                        else:
+                            pos = pos.union(set(p_matches[i]))
+                            sequences.append(p.matchtable_pset.match_sequences.get(seqid)[i][1])
+
+    else:
+        sequences = pattern_sequence
 
     ncol = max([len(i) for i in sequences])
     matrix = {

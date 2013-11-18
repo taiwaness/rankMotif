@@ -2,9 +2,9 @@
 
 import os
 import argparse
-from seetfbs.basic import Pattern, PatternSet
+from seetfbs.basic import Pattern, PatternSet, merge_patterns
 from seetfbs.scoring import PatternScoring
-from seetfbs.ranking import Cluster
+from seetfbs.ranking import Cluster, pfm
 from seetfbs.seqio import parse_fasta_noheader
 
 
@@ -20,8 +20,8 @@ def main():
                         help='The sequence type of the patterns [dna|rna]')
     parser.add_argument('-out', required=True,
                         help='Output directory')
-    parser.add_argument('-cpu', type=int, default=1,
-                        help='Number of CPUs to perform the analysis (default: 1)')
+    # parser.add_argument('-cpu', type=int, default=1,
+    #                     help='Number of CPUs to perform the analysis (default: 1)')
     parser.add_argument('-sp', type=int, default=1,
                         help='The weight of position scoring (default: 1)')
     parser.add_argument('-cluster', type=int, default=5,
@@ -51,12 +51,19 @@ def main():
     cluster = Cluster(args.cluster, similarity=0.8, reverse_complement=reverse_complement)
     cluster.run(pattern_scoring)
 
-    with open(os.path.join(args.out, 'ranked_patterns.txt'), 'w') as fo:
-        for i, j in cluster.clustered_patterns.iteritems():
-            for p in j:
-                fo.write('{0}: {1}'.format(i, p.sequence))
+    cluster_pfm = {}
+    for i, j in cluster.results.iteritems():
+        merged = merge_patterns(j, reverse_complement)
+        cluster_pfm.update({i: pfm(merged.extract_match_sequences(
+            parse_fasta_noheader(args.pset)))})
+
+    for i, j in cluster_pfm.iteritems():
+        with open(os.path.join(args.out, 'cluster_{0}.txt'.format(i)), 'w') as fo:
+            fo.write('cluster_{0}\t{1}\n'.format(i, str(len(j.get('a')))))
+            for base in ['a', 't', 'c', 'g']:
+                fo.write('\t'.join([str(i) for i in j.get(base)]))
                 fo.write('\n')
-            fo.flush()
+                fo.flush()
 
 
 if __name__ == '__main__':

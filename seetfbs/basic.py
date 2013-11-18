@@ -93,11 +93,14 @@ class MatchTable(object):
                 self.n_hitsites += 1
                 if self.reverse_complement:
                     if j.group(1):
-                        self._match_position.add(self.n_seqs, sequence, i, j.start(), j.end(), False)
+                        self._match_position.add(
+                            self.n_seqs, sequence, i, j.start(), j.end(), False)
                     elif j.group(2):
-                        self._match_position.add(self.n_seqs, rc_sequence, i, j.start(), j.end(), True)
+                        self._match_position.add(
+                            self.n_seqs, rc_sequence, i, j.start(), j.end(), True)
                 elif j.group(1):
-                    self._match_position.add(self.n_seqs, sequence, i, j.start(), j.end(), False)
+                    self._match_position.add(
+                        self.n_seqs, sequence, i, j.start(), j.end(), False)
             if has_match:
                 self.n_hitseqs += 1
 
@@ -149,46 +152,153 @@ class PatternSet(object):
         self._collect.pop(sequence)
 
 
-def merge_pattern(pattern_1, pattern_2):
-    seq_1 = pattern_1.sequence
-    seq_2 = pattern_2.sequence
-    arrlen = len(seq_1) + len(seq_2) - 1
+class MergePattern(object):
 
+    def __init__(self, reverse_complement):
+        self.reverse_complement = reverse_complement
+        self._strands = {}
+
+    def add(self, pattern, strand):
+        self._strands.update({pattern: strand})
+
+    def extract_match_sequences(self, seqset):
+        pos_matches = {}
+        pos_matches_base = {}
+        match_sequences = []
+
+        for pattern in self._strands:
+            pattern.build_matchtable_pset(seqset, self.reverse_complement)
+
+        for pattern, strand in self._strands.iteritems():
+            for seqid, pos in pattern.matchtable_pset.pos_matches.iteritems():
+                for i, j in enumerate(pos):
+                    if seqid in pos_matches and j in pos_matches.get(seqid):
+                        continue
+                    for p in j:
+                        if seqid in pos_matches_base and p in pos_matches_base.get(seqid):
+                            raise Exception('Should not reach here. Please report bug.')
+                        else:
+                            if seqid in pos_matches_base:
+                                pos_matches_base.get(seqid).add(p)
+                            else:
+                                pos_matches_base.update({seqid: {p}})
+                    if self._strands.get(pattern) == 2:
+                        strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
+                        if strand == 1:
+                            match_sequence = revcomp(match_sequence)
+                    else:
+                        strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
+                    if seqid in pos_matches:
+                        pos_matches.get(seqid).append(j)
+                    else:
+                        pos_matches.update({seqid: [j]})
+
+                    match_sequences.append(match_sequence)
+
+        return match_sequences
+
+
+def merge_patterns(pattern_list, reverse_complement=False):
+    """Merge patterns and return directional pattern objects
+    and their relative strand directions"""
+    merged_patterns = MergePattern(reverse_complement)
+    if len(pattern_list) > 1:
+        reference = pattern_list[0].sequence
+        for pattern in pattern_list[1:]:
+            reference = merge_sequences(reference, pattern.sequence, reverse_complement)[0]
+        merged_patterns.add(Pattern(reference), 1)
+        for pattern in pattern_list[1:]:
+            seq_1, seq_2, strands = merge_sequences(reference, pattern.sequence, reverse_complement)
+            merged_patterns.add(Pattern(seq_2), strands[1])
+    else:
+        merged_patterns.add(Pattern(pattern_list[0].sequence), 1)
+
+    return merged_patterns
+
+
+def merge_sequences(seq_1, seq_2, reverse_complement=False):
+    arrlen = len(seq_1) + len(seq_2) - 1
     max_score = -1
     best_seq1 = None
     best_seq2 = None
     best_strands = None
 
     strands_1 = [1, 1]
-    for i in range(arrlen):
-        s1 = '%s%s%s' % ('n' * i, seq_1, 'n' * (arrlen - i - len(seq_1) + 1))
-        s2 = '%s%s%s' % ('n' * (arrlen - i - len(seq_2) + 1), seq_2, 'n' * i)
-        score = full_alignment_scoring(s1, s2)
-        if score > max_score:
-            max_score = score
-            best_seq1 = s1
-            best_seq2 = s2
-            best_strands = strands_1
+    for i in range(arrlen - len(seq_1) + 1):
+        for j in range(arrlen - len(seq_2) + 1):
+            if j > i:
+                left_1 = ''
+                left_2 = 'n' * (j - i)
+            elif i > j:
+                left_1 = 'n' * (i - j)
+                left_2 = ''
+            else:
+                left_1 = ''
+                left_2 = ''
 
-    strands_2 = [2, 1]
-    rc_seq_1 = revcomp(seq_1)
-    for i in range(arrlen):
-        s1 = '%s%s%s' % ('n' * i, rc_seq_1, 'n' * (arrlen - i - len(rc_seq_1) + 1))
-        s2 = '%s%s%s' % ('n' * (arrlen - i - len(seq_2) + 1), seq_2, 'n' * i)
-        score = full_alignment_scoring(s1, s2)
-        if score > max_score:
-            max_score = score
-            best_seq1 = seq_1
-            best_seq2 = seq_2
-            best_strands = strands_2
+            if len(seq_2) + j - 1 > len(seq_1) + i - 1:
+                right_1 = 'n' * ((len(seq_2) + j - 1) - (len(seq_1) + i - 1))
+                right_2 = ''
+            elif len(seq_1) + i - 1 > len(seq_2) + j - 1:
+                right_1 = ''
+                right_2 = 'n' * ((len(seq_1) + i - 1) - (len(seq_2) + j - 1))
+            else:
+                right_1 = ''
+                right_2 = ''
 
-    return ((best_strands[0], Pattern(best_seq1)), (best_strands[1], Pattern(best_seq2)))
+            s1 = '%s%s%s' % (left_1, seq_1, right_1)
+            s2 = '%s%s%s' % (left_2, seq_2, right_2)
+            score = full_alignment_scoring(s1, s2)
+            if score > max_score:
+                max_score = score
+                best_seq1 = s1
+                best_seq2 = s2
+                best_strands = strands_1
+
+    if reverse_complement:
+        strands_2 = [1, 2]
+        seq_2 = revcomp(seq_2)
+
+        for i in range(arrlen - len(seq_1) + 1):
+            for j in range(arrlen - len(seq_2) + 1):
+                if j > i:
+                    left_1 = ''
+                    left_2 = 'n' * (j - i)
+                elif i > j:
+                    left_1 = 'n' * (i - j)
+                    left_2 = ''
+                else:
+                    left_1 = ''
+                    left_2 = ''
+
+                if len(seq_2) + j - 1 > len(seq_1) + i - 1:
+                    right_1 = 'n' * ((len(seq_2) + j - 1) - (len(seq_1) + i - 1))
+                    right_2 = ''
+                elif len(seq_1) + i - 1 > len(seq_2) + j - 1:
+                    right_1 = ''
+                    right_2 = 'n' * ((len(seq_1) + i - 1) - (len(seq_2) + j - 1))
+                else:
+                    right_1 = ''
+                    right_2 = ''
+
+                s1 = '%s%s%s' % (left_1, seq_1, right_1)
+                s2 = '%s%s%s' % (left_2, seq_2, right_2)
+                score = full_alignment_scoring(s1, s2)
+                if score > max_score:
+                    max_score = score
+                    best_seq1 = s1
+                    best_seq2 = s2
+                    best_strands = strands_2
+
+    return (best_seq1, best_seq2, best_strands)
 
 
 def full_alignment_scoring(seq_1, seq_2):
-    assert len(seq_1) == len(seq_2)
+    assert len(seq_1) == len(seq_2), (seq_1, seq_2)
 
     score = 0
     for i in range(len(seq_1)):
-        if seq_1[i] == seq_2[i]:
+        if seq_1[i] == seq_2[i] != 'n':
             score += 1
+
+    return score
