@@ -11,21 +11,21 @@ from seetfbs.seqio import parse_fasta_noheader
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-pset', required=True,
-                        help='Positive set of Chip-Chip sequences in FASTA format')
+                        help='positive set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-nset', required=True,
-                        help='Negative set of Chip-Chip sequences in FASTA format')
+                        help='negative set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-plist', required=True,
-                        help='Pattern list file')
+                        help='pattern list file')
     parser.add_argument('-seqtype', required=True, choices=['dna', 'rna'],
-                        help='The sequence type of the patterns [dna|rna]')
+                        help='the sequence type of the patterns [dna|rna]')
     parser.add_argument('-out', required=True,
-                        help='Output directory')
+                        help='output directory')
     # parser.add_argument('-cpu', type=int, default=1,
     #                     help='Number of CPUs to perform the analysis (default: 1)')
     parser.add_argument('-sp', type=int, default=1,
-                        help='The weight of position scoring (default: 1)')
+                        help='the weight of position scoring (default: 1)')
     parser.add_argument('-cluster', type=int, default=5,
-                        help='Maximum number of clusters in the output (default: 5)')
+                        help='maximum number of clusters in the output (default: 5)')
     args = parser.parse_args()
 
     if not os.path.exists(args.out):
@@ -58,7 +58,7 @@ def main():
             parse_fasta_noheader(args.pset)))})
 
     for i, j in cluster_pfm.iteritems():
-        with open(os.path.join(args.out, 'cluster_{0}.txt'.format(i)), 'w') as fo:
+        with open(os.path.join(args.out, 'cluster_{0}.pfm.txt'.format(i)), 'w') as fo:
             fo.write('cluster_{0}\t{1}\n'.format(i, str(len(j.get('a')))))
             for base in ['a', 't', 'c', 'g']:
                 fo.write('\t'.join([str(i) for i in j.get(base)]))
