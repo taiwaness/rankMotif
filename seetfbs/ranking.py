@@ -9,10 +9,12 @@ from .basic import Pattern
 
 class Cluster(object):
 
-    def __init__(self, max_cluster=5, similarity=0.8, reverse_complement=False):
+    def __init__(self, max_cluster=5, similarity=0.8,
+                 max_patterns_per_cluster=5, reverse_complement=False):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.max_cluster = max_cluster
         self.similarity = similarity
+        self.max_patterns_per_cluster = max_patterns_per_cluster
         self.reverse_complement = reverse_complement
         self.results = {}
 
@@ -25,6 +27,7 @@ class Cluster(object):
             pattern_scoring.results, key=lambda x: pattern_scoring.results.get(x), reverse=True)
         clusters = [0] * len(pattern_scoring.results)
         n_clusters = 0
+        n_patterns = {}
 
         for i in range(len(ranked_patterns)):
             if n_clusters == self.max_cluster:
@@ -32,20 +35,25 @@ class Cluster(object):
             if clusters[i] == 0:
                 n_clusters += 1
                 clusters[i] = n_clusters
+                n_patterns.update({n_clusters: 0})
                 self.results.update({n_clusters: [ranked_patterns[i]]})
                 for j in range(i + 1, len(ranked_patterns)):
-                    score = sim_pfm(pfm(ranked_patterns[i]), pfm(ranked_patterns[j]), self.reverse_complement)[2]
+                    if n_patterns.get(n_clusters) == self.max_patterns_per_cluster:
+                        break
+                    score = sim_pfm(
+                        pfm(ranked_patterns[i]), pfm(ranked_patterns[j]), self.reverse_complement)[2]
                     if clusters[j] == 0 and score >= self.similarity:
                         clusters[j] = n_clusters
                         self.results.get(n_clusters).append(ranked_patterns[j])
+                        n_patterns[n_clusters] += 1
 
         return self
 
 
 def pfm(pattern_sequence):
     """Claculate position frequency matrix (PFM) of matching sequences"""
-    sequences = []
     if isinstance(pattern_sequence, Pattern):
+        sequences = []
         for match_sequences in pattern_sequence.matchtable_pset.match_sequences.itervalues():
             for strand, sequence in match_sequences:
                 if strand == 2:
@@ -55,7 +63,7 @@ def pfm(pattern_sequence):
     else:
         sequences = pattern_sequence
 
-    ncol = max([len(i) for i in sequences])
+    ncol = len(sequences[0])
     matrix = {
         'a': [0] * ncol,
         't': [0] * ncol,

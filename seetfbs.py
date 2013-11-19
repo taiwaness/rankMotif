@@ -28,6 +28,8 @@ def main():
                         help='the weight of position scoring (default: 1)')
     parser.add_argument('-cluster', type=int, default=5,
                         help='maximum number of clusters in the output (default: 5)')
+    parser.add_argument('-n', type=int, default=5,
+                        help='maximum number of patterns per cluster (default: 5)')
     parser.add_argument('-log',
                         help='log file (default: stdout)')
     args = parser.parse_args()
@@ -43,6 +45,7 @@ def main():
         log_config.update({'stream': sys.stdout})
 
     logging.basicConfig(**log_config)
+
     logger = logging.getLogger('main')
 
     if not os.path.exists(args.out):
@@ -66,15 +69,36 @@ def main():
     pattern_scoring = PatternScoring(args.sp)
     pattern_scoring.build(pattern_set)
 
-    cluster = Cluster(args.cluster, similarity=0.8, reverse_complement=reverse_complement)
+    cluster = Cluster(args.cluster, 0.8, args.n, reverse_complement)
     cluster.run(pattern_scoring)
 
     cluster_pfm = {}
     logger.info('merging patterns and calculating PFMs')
-    for i, j in cluster.results.iteritems():
-        merged = merge_patterns(j, reverse_complement)
-        cluster_pfm.update({i: pfm(merged.extract_match_sequences(
-            parse_fasta_noheader(args.pset)))})
+
+    with open(os.path.join(args.out, 'clustered_patterns.txt'), 'w') as fo, \
+            open(os.path.join(args.out, 'merged_patterns.txt'), 'w') as fo2, \
+            open(os.path.join(args.out, 'match_sequences.txt'), 'w') as fo3:
+        fo.write('cluster: pattern\n')
+        fo2.write('cluster: strand pattern\n')
+        fo3.write('cluster: sequence\n')
+
+        for i, j in cluster.results.iteritems():
+            for p in j:
+                fo.write('{0}: {1}\n'.format(i, p.sequence))
+                fo.flush()
+
+            merged = merge_patterns(j, reverse_complement)
+            match_sequences = merged.extract_match_sequences(args.pset)
+
+            for p in merged.patterns:
+                fo2.write('{0}: {1} {2}\n'.format(i, merged._strands.get(p), p.sequence))
+                fo2.flush()
+
+            for s in match_sequences:
+                fo3.write('{0}: {1}\n'.format(i, s))
+                fo3.flush()
+
+            cluster_pfm.update({i: pfm(match_sequences)})
 
     for i, j in cluster_pfm.iteritems():
         with open(os.path.join(args.out, 'cluster_{0}.pfm.txt'.format(i)), 'w') as fo:
@@ -83,6 +107,8 @@ def main():
                 fo.write('\t'.join([str(i) for i in j.get(base)]))
                 fo.write('\n')
                 fo.flush()
+
+    logger.info('Job has finished.')
 
 
 if __name__ == '__main__':
