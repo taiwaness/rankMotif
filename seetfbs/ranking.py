@@ -38,7 +38,7 @@ class Cluster(object):
                 n_patterns.update({n_clusters: 0})
                 self.results.update({n_clusters: [ranked_patterns[i]]})
                 for j in range(i + 1, len(ranked_patterns)):
-                    if n_patterns.get(n_clusters) == self.max_patterns_per_cluster:
+                    if n_patterns.get(n_clusters) == self.max_patterns_per_cluster - 1:
                         break
                     score = sim_pfm(
                         pfm(ranked_patterns[i]), pfm(ranked_patterns[j]), self.reverse_complement)[2]

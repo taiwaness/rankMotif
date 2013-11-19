@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#
+# seetfbs - Discovering transcription factor binding sites from noisy data
+#
+# Created: 2013.11.19
+# Version: 1.0
 
 import os
 import sys
@@ -11,7 +16,8 @@ from seetfbs.seqio import parse_fasta_noheader
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Discovering transcription factor binding sites from noisy data')
     parser.add_argument('-pset', required=True,
                         help='positive set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-nset', required=True,

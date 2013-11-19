@@ -1,7 +1,6 @@
 import re
 import logging
 from .seqio import revcomp, parse_fasta_noheader
-import pdb
 
 
 class Pattern(object):
@@ -168,7 +167,6 @@ class MergePattern(object):
 
     def extract_match_sequences(self, fasta_handle):
         pos_matches = {}
-        # pos_matches_base = {}
         match_sequences = []
 
         for pattern in self._strands:
@@ -180,15 +178,6 @@ class MergePattern(object):
                 for i, j in enumerate(pos):
                     if seqid in pos_matches and j in pos_matches.get(seqid):
                         continue
-                    # for p in j:
-                    #     if seqid in pos_matches_base and p in pos_matches_base.get(seqid):
-                    #         pdb.set_trace()
-                    #         raise Exception('Should not reach here. Please report bug.')
-                    #     else:
-                    #         if seqid in pos_matches_base:
-                    #             pos_matches_base.get(seqid).add(p)
-                    #         else:
-                    #             pos_matches_base.update({seqid: {p}})
                     match_strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
                     if match_strand == 2:
                         match_sequence = revcomp(match_sequence)
