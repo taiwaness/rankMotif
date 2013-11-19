@@ -1,3 +1,4 @@
+import logging
 from math import sqrt
 from .basic import PatternSet
 
@@ -7,10 +8,13 @@ class PreferentialOccurrence(object):
     and the negative set"""
 
     def __init__(self):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self.results = {}
 
     def build(self, pattern_set, append=False):
         assert isinstance(pattern_set, PatternSet)
+
+        self._logger.info('building scores')
 
         if not append:
             self.results = {}
@@ -53,11 +57,14 @@ class PositionScoring(object):
                 return self.matrix.get(seqid).get(index)
 
     def __init__(self):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self.results = {}
         self._ntscore = self._PositionScoreMatrix()
 
     def build(self, pattern_set, append=False):
         assert isinstance(pattern_set, PatternSet)
+
+        self._logger.info('building scores')
 
         if not append:
             self._ntscore = self._PositionScoreMatrix()

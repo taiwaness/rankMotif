@@ -1,14 +1,16 @@
 import os
+import logging
 import subprocess
 from tempfile import NamedTemporaryFile
 from .scoring import PatternScoring
 from .seqio import revcomp
-from .basic import Pattern, PatternSet
+from .basic import Pattern
 
 
 class Cluster(object):
 
     def __init__(self, max_cluster=5, similarity=0.8, reverse_complement=False):
+        self._logger = logging.getLogger(self.__class__.__name__)
         self.max_cluster = max_cluster
         self.similarity = similarity
         self.reverse_complement = reverse_complement
@@ -16,6 +18,7 @@ class Cluster(object):
 
     def run(self, pattern_scoring):
         isinstance(pattern_scoring, PatternScoring)
+        self._logger.info('begin running pattern clustering')
 
         self.results = {}
         ranked_patterns = sorted(
@@ -40,8 +43,7 @@ class Cluster(object):
 
 
 def pfm(pattern_sequence):
-    """Claculate position frequency matrix (PFM)
-    of matching sequences of a pattern or a pattern set"""
+    """Claculate position frequency matrix (PFM) of matching sequences"""
     sequences = []
     if isinstance(pattern_sequence, Pattern):
         for match_sequences in pattern_sequence.matchtable_pset.match_sequences.itervalues():
@@ -50,26 +52,6 @@ def pfm(pattern_sequence):
                     sequences.append(revcomp(sequence))
                 else:
                     sequences.append(sequence)
-    elif isinstance(pattern_sequence, PatternSet):
-        pos_matches = {}
-        for p in pattern_sequence:
-            for seqid, p_matches in p.matchtable_pset.pos_matches.iteritems():
-                pos = set()
-                if seqid not in pos_matches:
-                    pos_matches.update({seqid: []})
-                for i in range(len(p_matches)):
-                    if p_matches[i] in pos_matches.get(seqid):
-                        continue
-                    else:
-                        if pos.union(set(p_matches[i])) != len(pos) + len(p_matches[i]):
-                            # Two positions overlap
-                            print('Two positions overlap. This is a bug to be fixed')
-                            print(pos)
-                            print(p_matches[i])
-                        else:
-                            pos = pos.union(set(p_matches[i]))
-                            sequences.append(p.matchtable_pset.match_sequences.get(seqid)[i][1])
-
     else:
         sequences = pattern_sequence
 

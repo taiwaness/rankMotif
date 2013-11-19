@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import os
+import sys
+import logging
 import argparse
 from seetfbs.basic import Pattern, PatternSet, merge_patterns
 from seetfbs.scoring import PatternScoring
@@ -26,7 +28,22 @@ def main():
                         help='the weight of position scoring (default: 1)')
     parser.add_argument('-cluster', type=int, default=5,
                         help='maximum number of clusters in the output (default: 5)')
+    parser.add_argument('-log',
+                        help='log file (default: stdout)')
     args = parser.parse_args()
+
+    log_config = {
+        'level': logging.INFO,
+        'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        'datefmt': '%Y-%m-%d %H:%M:%S',
+    }
+    if args.log:
+        log_config.update({'filename': args.log})
+    else:
+        log_config.update({'stream': sys.stdout})
+
+    logging.basicConfig(**log_config)
+    logger = logging.getLogger('main')
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)
@@ -38,6 +55,7 @@ def main():
 
     pattern_set = PatternSet(reverse_complement)
 
+    logger.info('building match tables of patterns')
     with open(args.plist, 'r') as fi:
         for line in fi:
             pattern = Pattern(line.strip())
@@ -52,6 +70,7 @@ def main():
     cluster.run(pattern_scoring)
 
     cluster_pfm = {}
+    logger.info('merging patterns and calculating PFMs')
     for i, j in cluster.results.iteritems():
         merged = merge_patterns(j, reverse_complement)
         cluster_pfm.update({i: pfm(merged.extract_match_sequences(
