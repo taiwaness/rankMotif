@@ -118,4 +118,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if sys.hexversion > 0x03000000:
+        sys.exit('Unsupported python version: %s' % sys.version)
     main()

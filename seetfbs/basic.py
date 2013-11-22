@@ -49,7 +49,7 @@ class MatchTable(object):
                 self.pos_wildcards.update({seqid: []})
                 self.pos_nonwildcards.update({seqid: []})
                 self.match_sequences.update({seqid: []})
-            self.pos_matches.get(seqid).append(range(hit_start, hit_end))
+            self.pos_matches.get(seqid).append(xrange(hit_start, hit_end))
             pos_wildcards = []
             pos_nonwildcards = []
             for i, j in enumerate(query):
@@ -217,8 +217,8 @@ def merge_sequences(seq_1, seq_2, reverse_complement=False):
     best_strands = None
 
     strands_1 = [1, 1]
-    for i in range(arrlen - len(seq_1) + 1):
-        for j in range(arrlen - len(seq_2) + 1):
+    for i in xrange(arrlen - len(seq_1) + 1):
+        for j in xrange(arrlen - len(seq_2) + 1):
             if j > i:
                 left_1 = ''
                 left_2 = 'n' * (j - i)
@@ -252,8 +252,8 @@ def merge_sequences(seq_1, seq_2, reverse_complement=False):
         strands_2 = [1, 2]
         seq_2 = revcomp(seq_2)
 
-        for i in range(arrlen - len(seq_1) + 1):
-            for j in range(arrlen - len(seq_2) + 1):
+        for i in xrange(arrlen - len(seq_1) + 1):
+            for j in xrange(arrlen - len(seq_2) + 1):
                 if j > i:
                     left_1 = ''
                     left_2 = 'n' * (j - i)
@@ -290,7 +290,7 @@ def full_alignment_scoring(seq_1, seq_2):
     assert len(seq_1) == len(seq_2), (seq_1, seq_2)
 
     score = 0
-    for i in range(len(seq_1)):
+    for i in xrange(len(seq_1)):
         if seq_1[i] == seq_2[i] != 'n':
             score += 1
 

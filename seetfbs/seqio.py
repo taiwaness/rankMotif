@@ -35,7 +35,7 @@ def parse_fasta(handle):
 
     header = ''
     sequence = []
-    while True:
+    while 1:
         line = fi.readline()
         if line == '':
             if header and sequence:
@@ -70,7 +70,7 @@ def parse_fasta_noheader(handle):
 
     header = ''
     sequence = []
-    while True:
+    while 1:
         line = fi.readline()
         if line == '':
             if header and sequence:

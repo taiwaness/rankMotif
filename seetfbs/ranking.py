@@ -29,7 +29,7 @@ class Cluster(object):
         n_clusters = 0
         n_patterns = {}
 
-        for i in range(len(ranked_patterns)):
+        for i in xrange(len(ranked_patterns)):
             if n_clusters == self.max_cluster:
                 break
             if clusters[i] == 0:
@@ -37,7 +37,7 @@ class Cluster(object):
                 clusters[i] = n_clusters
                 n_patterns.update({n_clusters: 0})
                 self.results.update({n_clusters: [ranked_patterns[i]]})
-                for j in range(i + 1, len(ranked_patterns)):
+                for j in xrange(i + 1, len(ranked_patterns)):
                     if n_patterns.get(n_clusters) == self.max_patterns_per_cluster - 1:
                         break
                     score = sim_pfm(
@@ -78,7 +78,7 @@ def pfm(pattern_sequence):
             total[i] += 1
 
     # Normalization
-    for i in range(ncol):
+    for i in xrange(ncol):
         matrix.get('a')[i] = float(matrix.get('a')[i]) / total[i]
         matrix.get('t')[i] = float(matrix.get('t')[i]) / total[i]
         matrix.get('c')[i] = float(matrix.get('c')[i]) / total[i]
