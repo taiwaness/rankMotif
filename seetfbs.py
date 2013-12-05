@@ -18,25 +18,27 @@ from seetfbs.seqio import parse_fasta_noheader
 def main():
     parser = argparse.ArgumentParser(
         description='Discovering transcription factor binding sites from noisy data')
-    parser.add_argument('-pset', required=True,
+    parser.add_argument('-pset', required=True, metavar='<file>',
                         help='positive set of Chip-Chip sequences in FASTA format')
-    parser.add_argument('-nset', required=True,
+    parser.add_argument('-nset', required=True, metavar='<file>',
                         help='negative set of Chip-Chip sequences in FASTA format')
-    parser.add_argument('-plist', required=True,
+    parser.add_argument('-plist', required=True, metavar='<file>',
                         help='pattern list file')
     parser.add_argument('-seqtype', required=True, choices=['dna', 'rna'],
-                        help='the sequence type of the patterns [dna|rna]')
-    parser.add_argument('-out', required=True,
+                        help='sequence type of the patterns')
+    parser.add_argument('-out', required=True, metavar='<file>',
                         help='output directory')
     # parser.add_argument('-cpu', type=int, default=1,
     #                     help='Number of CPUs to perform the analysis (default: 1)')
-    parser.add_argument('-sp', type=int, default=1,
-                        help='the weight of position scoring (default: 1)')
-    parser.add_argument('-cluster', type=int, default=5,
+    parser.add_argument('-sp', type=int, default=1, metavar='<int>',
+                        help='weight of position scoring (default: 1)')
+    parser.add_argument('-cluster', type=int, default=5, metavar='<int>',
                         help='maximum number of clusters in the output (default: 5)')
-    parser.add_argument('-n', type=int, default=5,
+    parser.add_argument('-n', type=int, default=5, metavar='<int>',
                         help='maximum number of patterns per cluster (default: 5)')
-    parser.add_argument('-log',
+    parser.add_argument('-seqmask', choices=['yse', 'no'], default='no',
+                        help='applying sequence mask (default: no)')
+    parser.add_argument('-log', metavar='<file>',
                         help='log file (default: stdout)')
     args = parser.parse_args()
 
@@ -62,6 +64,11 @@ def main():
     else:
         reverse_complement = False
 
+    if args.seqmask == 'yes':
+        seqmask = True
+    else:
+        seqmask = False
+
     pattern_set = PatternSet(reverse_complement)
 
     logger.info('building match tables of patterns')
@@ -73,7 +80,7 @@ def main():
             pattern_set.add(pattern)
 
     pattern_scoring = PatternScoring(args.sp)
-    pattern_scoring.build(pattern_set)
+    pattern_scoring.build(pattern_set, seqmask)
 
     cluster = Cluster(args.cluster, 0.8, args.n, reverse_complement)
     cluster.run(pattern_scoring)

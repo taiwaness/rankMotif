@@ -61,7 +61,7 @@ class PositionScoring(object):
         self.results = {}
         self._ntscore = self._PositionScoreMatrix()
 
-    def build(self, pattern_set, append=False):
+    def build(self, pattern_set, append=False, seqmask=False):
         assert isinstance(pattern_set, PatternSet)
 
         self._logger.info('building scores')
@@ -79,6 +79,8 @@ class PositionScoring(object):
         for pattern in pattern_set:
             match_score = 0
             for seqid, indices in pattern.matchtable_pset.pos_nonwildcards.iteritems():
+                if seqmask and seqid > pattern.matchtable_pset.n_hitseqs:
+                    continue
                 for index in indices:
                     for i in index:
                         match_score += self._ntscore.get(seqid, i)
@@ -97,7 +99,7 @@ class PatternScoring(object):
         self._poccur = PreferentialOccurrence()
         self._pscore = PositionScoring()
 
-    def build(self, pattern_set, append=False):
+    def build(self, pattern_set, append=False, seqmask=False):
         assert isinstance(pattern_set, PatternSet)
 
         if not append:
@@ -106,7 +108,7 @@ class PatternScoring(object):
             self._pscore = PositionScoring()
 
         self._poccur.build(pattern_set, append)
-        self._pscore.build(pattern_set, append)
+        self._pscore.build(pattern_set, append, seqmask)
 
         for pattern, score in self._poccur.results.iteritems():
             pattern_score = score * (self._pscore.results.get(pattern) ** self.sp_weight)
