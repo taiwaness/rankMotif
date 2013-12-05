@@ -49,7 +49,7 @@ class MatchTable(object):
                 self.pos_wildcards.update({seqid: []})
                 self.pos_nonwildcards.update({seqid: []})
                 self.match_sequences.update({seqid: []})
-            self.pos_matches.get(seqid).append(xrange(hit_start, hit_end))
+            self.pos_matches.get(seqid).append(list(xrange(hit_start, hit_end)))
             pos_wildcards = []
             pos_nonwildcards = []
             for i, j in enumerate(query):
