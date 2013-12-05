@@ -36,7 +36,7 @@ def main():
                         help='maximum number of clusters in the output (default: 5)')
     parser.add_argument('-n', type=int, default=5, metavar='<int>',
                         help='maximum number of patterns per cluster (default: 5)')
-    parser.add_argument('-seqmask', choices=['yse', 'no'], default='no',
+    parser.add_argument('-seqmask', choices=['yes', 'no'], default='no',
                         help='applying sequence mask (default: no)')
     parser.add_argument('-log', metavar='<file>',
                         help='log file (default: stdout)')
