@@ -80,7 +80,7 @@ def main():
             pattern_set.add(pattern)
 
     pattern_scoring = PatternScoring(args.sp)
-    pattern_scoring.build(pattern_set, False, seqmask)
+    pattern_scoring.build(pattern_set, seqmask=seqmask)
 
     cluster = Cluster(args.cluster, 0.8, args.n, reverse_complement)
     cluster.run(pattern_scoring)
