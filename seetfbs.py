@@ -32,7 +32,7 @@ def main():
     # parser.add_argument('-cpu', type=int, default=1,
     #                     help='Number of CPUs to perform the analysis (default: 1)')
     parser.add_argument('-oc', metavar='<file>',
-                        help='Support of nucleosome occupancy scores')
+                        help='support of nucleosome occupancy scores')
     parser.add_argument('-sp', type=int, default=1, metavar='<int>',
                         help='weight of position scoring (default: 1)')
     parser.add_argument('-nc', type=int, default=5, metavar='<int>',
