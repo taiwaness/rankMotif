@@ -56,12 +56,20 @@ class PositionScoring(object):
             else:
                 return self.matrix.get(seqid).get(index)
 
+        def apply_nuclocc(self, nuclocc):
+            scores = parse_nucleosome_occupancy(nuclocc)
+            for seqid in self.matrix:
+                if seqid in scores:
+                    for i, j in self.matrix.get(seqid).iteritems():
+                        if i in scores.get(seqid):
+                            self.matrix.get(seqid)[i] *= scores.get(seqid).get(i)
+
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.results = {}
         self._ntscore = self._PositionScoreMatrix()
 
-    def build(self, pattern_set, append=False, seqmask=False):
+    def build(self, pattern_set, append=False, seqmask=False, nuclocc=None):
         assert isinstance(pattern_set, PatternSet)
 
         self._logger.info('building scores')
@@ -74,6 +82,10 @@ class PositionScoring(object):
             for seqid, indices in pattern.matchtable_pset.pos_nonwildcards.iteritems():
                 for index in indices:
                     self._ntscore.add(seqid, index)
+
+        # Apply nucleosome occupancy scores
+        if nuclocc:
+            self._ntscore.apply_nuclocc(nuclocc)
 
         # Assign scores to each pattern
         for pattern in pattern_set:
@@ -99,7 +111,7 @@ class PatternScoring(object):
         self._poccur = PreferentialOccurrence()
         self._pscore = PositionScoring()
 
-    def build(self, pattern_set, append=False, seqmask=False):
+    def build(self, pattern_set, append=False, seqmask=False, nuclocc=None):
         assert isinstance(pattern_set, PatternSet)
 
         if not append:
@@ -108,10 +120,40 @@ class PatternScoring(object):
             self._pscore = PositionScoring()
 
         self._poccur.build(pattern_set, append)
-        self._pscore.build(pattern_set, append, seqmask)
+        self._pscore.build(pattern_set, append, seqmask, nuclocc)
 
         for pattern, score in self._poccur.results.iteritems():
             pattern_score = score * (self._pscore.results.get(pattern) ** self.sp_weight)
             self.results.update({pattern: pattern_score})
 
         return self
+
+
+def parse_nucleosome_occupancy(path):
+    """Parse the nucleosome occupancy scores data"""
+    if isinstance(path, str):
+        fi = open(path, 'r')
+    else:
+        return None
+
+    scores = {}
+    for line in fi:
+        data = line.strip().split(' ')
+        seqid = int(data[0])
+        index = int(data[1]) - 1
+        score = float(data[2])
+        if scores.get(seqid):
+            scores.get(seqid).update({index: score})
+        else:
+            scores.update({seqid: {}})
+
+    # Scale score range to [0, 1]
+    for seqid, score in scores.iteritems():
+        values = score.values()
+        min_score = min(values)
+        max_score = max(values)
+        interval = max_score - min_score
+        for i, j in score.iteritems():
+            score[i] = (j - min_score) / interval
+
+    return scores
