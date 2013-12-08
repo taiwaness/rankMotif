@@ -3,7 +3,8 @@
 # seetfbs - Discovering transcription factor binding sites from noisy data
 #
 # Created: 2013.11.19
-# Version: 1.0
+
+__version__ = '1.1'
 
 import os
 import sys
@@ -30,16 +31,19 @@ def main():
                         help='output directory')
     # parser.add_argument('-cpu', type=int, default=1,
     #                     help='Number of CPUs to perform the analysis (default: 1)')
+    # parser.add_argument('-oc', metavar='<file>',
+    #                     help='applying nucleosome occupancy scores')
     parser.add_argument('-sp', type=int, default=1, metavar='<int>',
                         help='weight of position scoring (default: 1)')
-    parser.add_argument('-cluster', type=int, default=5, metavar='<int>',
+    parser.add_argument('-nc', type=int, default=5, metavar='<int>',
                         help='maximum number of clusters in the output (default: 5)')
-    parser.add_argument('-n', type=int, default=5, metavar='<int>',
+    parser.add_argument('-np', type=int, default=5, metavar='<int>',
                         help='maximum number of patterns per cluster (default: 5)')
     parser.add_argument('-seqmask', choices=['yes', 'no'], default='no',
                         help='applying sequence mask (default: no)')
     parser.add_argument('-log', metavar='<file>',
                         help='log file (default: stdout)')
+    parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
     args = parser.parse_args()
 
     log_config = {
