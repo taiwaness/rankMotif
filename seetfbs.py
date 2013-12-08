@@ -43,7 +43,8 @@ def main():
                         help='applying sequence mask (default: no)')
     parser.add_argument('-log', metavar='<file>',
                         help='log file (default: stdout)')
-    parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(__version__))
+    parser.add_argument('-v', '--version', action='version',
+                        version='%(prog)s {0}'.format(__version__))
     args = parser.parse_args()
 
     log_config = {
