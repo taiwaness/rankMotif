@@ -129,10 +129,10 @@ class PatternScoring(object):
         return self
 
 
-def parse_nucleosome_occupancy(path):
+def parse_nucleosome_occupancy(fpath):
     """Parse the nucleosome occupancy scores data"""
-    if isinstance(path, str):
-        fi = open(path, 'r')
+    if isinstance(fpath, str):
+        fi = open(fpath, 'r')
     else:
         return None
 
@@ -146,6 +146,8 @@ def parse_nucleosome_occupancy(path):
             scores.get(seqid).update({index: score})
         else:
             scores.update({seqid: {}})
+
+    fi.close()
 
     # Scale score range to [0, 1]
     for seqid, score in scores.iteritems():
