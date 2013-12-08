@@ -1,4 +1,4 @@
-1.1  2013-12-08  Jian-Long Huang <jianlong@ntu.edu.tw>
+1.1  2013-12-08  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
         * Change the command-line arguments:
           (1) -cluster to -nc
@@ -6,6 +6,6 @@
 
         * New option: applying sequence mask (-seqmask).
 
-1.0  2013-11-19  Jian-Long Huang <jianlong@ntu.edu.tw>
+1.0  2013-11-19  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
         * Implement basic features.
