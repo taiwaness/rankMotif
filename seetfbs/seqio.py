@@ -92,3 +92,14 @@ def parse_fasta_noheader(handle):
 
     if is_path:
         fi.close()
+
+
+def gc_content(fpath):
+    gc_count = 0
+    total = 0
+    for i in parse_fasta_noheader(fpath):
+        i = i.lower()
+        gc_count += i.count('g') + i.count('c')
+        total += len(i)
+
+    return float(gc_count) / total

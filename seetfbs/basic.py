@@ -1,6 +1,6 @@
 import re
 import logging
-from .seqio import revcomp, parse_fasta_noheader
+from seqio import revcomp, parse_fasta_noheader
 
 
 class Pattern(object):
