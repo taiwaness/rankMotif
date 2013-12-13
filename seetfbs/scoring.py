@@ -138,11 +138,11 @@ def parse_nucleosome_occupancy(fpath):
 
     scores = {}
     for line in fi:
-        data = line.strip().split(' ')
+        data = line.strip().split('\t')
         seqid = int(data[0])
         index = int(data[1]) - 1
-        score = float(data[2])
-        if scores.get(seqid):
+        score = float(data[4])
+        if seqid in scores:
             scores.get(seqid).update({index: score})
         else:
             scores.update({seqid: {}})

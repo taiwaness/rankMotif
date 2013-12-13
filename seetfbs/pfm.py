@@ -41,11 +41,17 @@ def pfm(pattern_sequence):
     return matrix
 
 
-def simpfm(pfm_1, pfm_2, gc_content, reverse_complement=False):
+def simpfm(pfm_1, pfm_2, gc_content, max_wsize=7, reverse_complement=False):
     """Calculate the similarity scores of two PFMs and return the top one"""
     len_pfm_1 = len(pfm_1.get('a'))
     len_pfm_2 = len(pfm_2.get('a'))
-    alnlen = len_pfm_1 + len_pfm_2 - 1
+
+    assert max_wsize > 0
+
+    min_pfm_len = min(len_pfm_1, len_pfm_2)
+    if max_wsize > min_pfm_len:
+        max_wsize = min_pfm_len - 2
+    alnlen = len_pfm_1 + len_pfm_2 - max_wsize
     max_score = 0
 
     for i in xrange(alnlen - len_pfm_1 + 1):
@@ -135,22 +141,15 @@ def simpfm_scoring(pfm_1, pfm_2):
             s += (pfm_1.get(j)[i] - pfm_2.get(j)[i]) ** 2
         scores.append(1 - sqrt(s) / sqrt(2))
 
-    if sum(scores) / alnlen == 0.5682710523977836:
-        print(0.5682710523977836)
-        print(scores)
-        print(alnlen)
-        for i, j in pfm_1.iteritems():
-            print('%s:\t%s' % (i, '\t'.join([str(x) for x in j])))
-        for i, j in pfm_2.iteritems():
-            print('%s:\t%s' % (i, '\t'.join([str(x) for x in j])))
-
     return sum(scores) / alnlen
 
 
 def reverse_pfm(pfm):
     rv_pfm = {}
-    for i, j in pfm.iteritems():
-        rv_pfm.update({i: j[::-1]})
+    rv_pfm.update({'a': pfm.get('t')[::-1]})
+    rv_pfm.update({'t': pfm.get('a')[::-1]})
+    rv_pfm.update({'c': pfm.get('g')[::-1]})
+    rv_pfm.update({'g': pfm.get('c')[::-1]})
 
     return rv_pfm
 
@@ -162,6 +161,8 @@ def main():
     parser.add_argument('-gc', type=float, required=True, metavar='<float>',
                         help='GC contents')
     parser.add_argument('-r', action='store_true')
+    parser.add_argument('-ws', type=int, default=7, metavar='<int>',
+                        help='maximum window size of simpfm (default: 7)')
     args = parser.parse_args()
 
     pfm1 = {}
@@ -178,7 +179,7 @@ def main():
         for i in ['a', 't', 'c', 'g']:
             pfm2.update({i: [float(x) for x in fi.readline().split('\t')]})
 
-    simpfm_score = simpfm(pfm1, pfm2, args.gc, reverse_complement=args.r)
+    simpfm_score = simpfm(pfm1, pfm2, args.gc, max_wsize=args.ws, reverse_complement=args.r)
     print(simpfm_score)
 
 

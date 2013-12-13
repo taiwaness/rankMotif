@@ -7,21 +7,23 @@ from .pfm import pfm, simpfm
 class Cluster(object):
 
     def __init__(self, max_cluster=5, similarity=0.8,
-                 max_patterns_per_cluster=5, reverse_complement=False):
+                 max_patterns_per_cluster=5, simpfm_max_wsize=7, reverse_complement=False):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.max_cluster = max_cluster
         self.similarity = similarity
         self.max_patterns_per_cluster = max_patterns_per_cluster
+        self.simpfm_max_wsize = simpfm_max_wsize
         self.reverse_complement = reverse_complement
         self.results = {}
 
-    def run(self, pattern_scoring, pset):
+    def run(self, pattern_scoring, gc=None, pset=None):
         isinstance(pattern_scoring, PatternScoring)
         self._logger.info('begin running pattern clustering')
 
         self.results = {}
 
-        gc = gc_content(pset)
+        if not gc:
+            gc = gc_content(pset)
         ranked_patterns = sorted(
             pattern_scoring.results, key=lambda x: pattern_scoring.results.get(x), reverse=True)
         clusters = [0] * len(pattern_scoring.results)
@@ -41,7 +43,7 @@ class Cluster(object):
                         break
                     score = simpfm(
                         pfm(ranked_patterns[i]), pfm(ranked_patterns[j]),
-                        gc, self.reverse_complement)[2]
+                        gc, self.simpfm_max_wsize, self.reverse_complement)[2]
                     if clusters[j] == 0 and score >= self.similarity:
                         clusters[j] = n_clusters
                         self.results.get(n_clusters).append(ranked_patterns[j])

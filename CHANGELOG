@@ -1,3 +1,9 @@
+1.2b  2013-12-13  Jian-Long Huang <jianlong@ntu.edu.tw>
+
+	* New option: applying nucleosome occupancy scores (-oc)
+
+	* New options for PFM similarity calculation: -ws and -gc
+
 1.1  2013-12-08  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
         * Change the command-line arguments:

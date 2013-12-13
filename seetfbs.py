@@ -39,6 +39,10 @@ def main():
                         help='maximum number of clusters in the output (default: 5)')
     parser.add_argument('-np', type=int, default=5, metavar='<int>',
                         help='maximum number of patterns per cluster (default: 5)')
+    parser.add_argument('-ws', type=int, default=7, metavar='<int>',
+                        help='maximum window size of simpfm (default: 7)')
+    parser.add_argument('-gc', type=float, metavar='<float>',
+                        help='GC contents (default: auto)')
     parser.add_argument('-seqmask', choices=['yes', 'no'], default='no',
                         help='applying sequence mask (default: no)')
     parser.add_argument('-log', metavar='<file>',
@@ -87,8 +91,8 @@ def main():
     pattern_scoring = PatternScoring(args.sp)
     pattern_scoring.build(pattern_set, seqmask=seqmask, nuclocc=args.oc)
 
-    cluster = Cluster(args.nc, 0.8, args.np, reverse_complement)
-    cluster.run(pattern_scoring)
+    cluster = Cluster(args.nc, 0.8, args.np, args.ws, reverse_complement)
+    cluster.run(pattern_scoring, gc=args.gc, pset=args.pset)
 
     cluster_pfm = {}
     logger.info('merging patterns and calculating PFMs')
