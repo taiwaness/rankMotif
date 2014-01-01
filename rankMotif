@@ -1,24 +1,28 @@
 #!/usr/bin/env python
 #
-# seetfbs - Discovering transcription factor binding sites from noisy data
+# rankMotif
 #
-# Created: 2013.11.19
+# Given a motif list, rankMotif will output the top-k motifs
+# without redundancy.
+#
+# Author: Jian-Long Huang <jianlong@ntu.edu.tw>
 
-__version__ = '1.1'
+__version__ = '1.2'
 
 import os
 import sys
 import logging
 import argparse
-from seetfbs.basic import Pattern, PatternSet, merge_patterns
-from seetfbs.scoring import PatternScoring
-from seetfbs.ranking import Cluster, pfm
-from seetfbs.seqio import parse_fasta_noheader
+from rankmotif.basic import Pattern, PatternSet, merge_patterns
+from rankmotif.scoring import PatternScoring
+from rankmotif.ranking import Cluster, pfm
+from rankmotif.seqio import parse_fasta_noheader
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Discovering transcription factor binding sites from noisy data')
+    parser = argparse.ArgumentParser(prog='rankMotif',
+        description='Given a motif list, rankMotif will output the top-k motifs'
+        'without redundancy.')
     parser.add_argument('-pset', required=True, metavar='<file>',
                         help='positive set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-nset', required=True, metavar='<file>',
