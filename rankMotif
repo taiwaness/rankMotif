@@ -43,8 +43,8 @@ def main():
                         help='maximum number of clusters in the output (default: 5)')
     parser.add_argument('-np', type=int, default=5, metavar='<int>',
                         help='maximum number of patterns per cluster (default: 5)')
-    parser.add_argument('-ws', type=int, default=7, metavar='<int>',
-                        help='maximum window size of simpfm (default: 7)')
+    parser.add_argument('-ws', type=int, metavar='<int>',
+                        help='maximum window size of simpfm (default: auto)')
     parser.add_argument('-gc', type=float, metavar='<float>',
                         help='GC contents (default: auto)')
     parser.add_argument('-seqmask', choices=['yes', 'no'], default='no',

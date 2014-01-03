@@ -7,7 +7,7 @@ from .pfm import pfm, simpfm
 class Cluster(object):
 
     def __init__(self, max_cluster=5, similarity=0.8,
-                 max_patterns_per_cluster=5, simpfm_max_wsize=7, reverse_complement=False):
+                 max_patterns_per_cluster=5, simpfm_max_wsize='auto', reverse_complement=False):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.max_cluster = max_cluster
         self.similarity = similarity
