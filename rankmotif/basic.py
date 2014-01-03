@@ -1,6 +1,6 @@
 import re
 import logging
-from seqio import revcomp, parse_fasta_noheader
+from seqio import revcomp, parse_fasta
 
 
 class Pattern(object):
@@ -36,19 +36,23 @@ class MatchTable(object):
     class _MatchPosition(object):
 
         def __init__(self):
+            self.id = 0
             self.seqid = set()
             self.pos_matches = {}
             self.pos_wildcards = {}
             self.pos_nonwildcards = {}
             self.match_sequences = {}
+            self.gene_name = {}
 
-        def add(self, seqid, query, hit, hit_start, hit_end, is_rc_match):
-            if seqid not in self.seqid:
-                self.seqid.add(seqid)
-                self.pos_matches.update({seqid: []})
-                self.pos_wildcards.update({seqid: []})
-                self.pos_nonwildcards.update({seqid: []})
-                self.match_sequences.update({seqid: []})
+        def add(self, gene_name, query, hit, hit_start, hit_end, is_rc_match):
+            seqid = self.id
+            self.id += 1
+            self.seqid.add(seqid)
+            self.gene_name.update({seqid: gene_name})
+            self.pos_matches.update({seqid: []})
+            self.pos_wildcards.update({seqid: []})
+            self.pos_nonwildcards.update({seqid: []})
+            self.match_sequences.update({seqid: []})
             self.pos_matches.get(seqid).append([i for i in xrange(hit_start, hit_end)])
             pos_wildcards = []
             pos_nonwildcards = []
@@ -85,7 +89,7 @@ class MatchTable(object):
             sequence.replace('n', '[atcg]'), rc_sequence.replace('n', '[atcg]')),
             re.IGNORECASE)
 
-        for i in seqset:
+        for h, i in seqset:
             i = i.lower()
             self.n_seqs += 1
             has_match = False
@@ -95,19 +99,23 @@ class MatchTable(object):
                 if self.reverse_complement:
                     if j.group(1):
                         self._match_position.add(
-                            self.n_seqs, sequence, i, j.start(), j.end(), False)
+                            h, sequence, i, j.start(), j.end(), False)
                     elif j.group(2):
                         self._match_position.add(
-                            self.n_seqs, rc_sequence, i, j.start(), j.end(), True)
+                            h, rc_sequence, i, j.start(), j.end(), True)
                 elif j.group(1):
                     self._match_position.add(
-                        self.n_seqs, sequence, i, j.start(), j.end(), False)
+                        h, sequence, i, j.start(), j.end(), False)
             if has_match:
                 self.n_hitseqs += 1
 
     @property
     def seqid(self):
         return self._match_position.seqid
+
+    @property
+    def gene_name(self):
+        return self._match_position.gene_name
 
     @property
     def pos_matches(self):
@@ -165,20 +173,22 @@ class MergePattern(object):
         self.patterns.append(pattern)
         self._strands.update({pattern: strand})
 
-    def extract_match_sequences(self, fasta_handle):
+    def extract_match_info(self, fasta_handle):
         pos_matches = {}
-        match_sequences = []
+        match_info = []
 
         for pattern in self._strands:
             pattern.build_matchtable_pset(
-                parse_fasta_noheader(fasta_handle), self.reverse_complement)
+                parse_fasta(fasta_handle), self.reverse_complement)
 
         for pattern in self._strands:
             for seqid, pos in pattern.matchtable_pset.pos_matches.iteritems():
                 for i, j in enumerate(pos):
                     if seqid in pos_matches and j in pos_matches.get(seqid):
                         continue
+                    gene_name = pattern.matchtable_pset.gene_name.get(seqid)
                     match_strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
+                    match_start = pattern.matchtable_pset.pos_matches.get(seqid)[i][0] + 1
                     if match_strand == 2:
                         match_sequence = revcomp(match_sequence)
                     if seqid in pos_matches:
@@ -186,9 +196,9 @@ class MergePattern(object):
                     else:
                         pos_matches.update({seqid: [j]})
 
-                    match_sequences.append(match_sequence)
+                    match_info.append((gene_name, match_strand, match_start, match_sequence))
 
-        return match_sequences
+        return match_info
 
 
 def merge_patterns(pattern_list, reverse_complement=False):

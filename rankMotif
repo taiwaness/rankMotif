@@ -16,13 +16,13 @@ import argparse
 from rankmotif.basic import Pattern, PatternSet, merge_patterns
 from rankmotif.scoring import PatternScoring
 from rankmotif.ranking import Cluster, pfm
-from rankmotif.seqio import parse_fasta_noheader
+from rankmotif.seqio import parse_fasta
 
 
 def main():
     parser = argparse.ArgumentParser(prog='rankMotif',
-        description='Given a motif list, rankMotif will output the top-k motifs'
-        'without redundancy.')
+                                     description='Given a motif list, rankMotif will output the top-k motifs'
+                                     'without redundancy.')
     parser.add_argument('-pset', required=True, metavar='<file>',
                         help='positive set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-nset', required=True, metavar='<file>',
@@ -88,8 +88,8 @@ def main():
     with open(args.plist, 'r') as fi:
         for line in fi:
             pattern = Pattern(line.strip())
-            pattern.build_matchtable_pset(parse_fasta_noheader(args.pset), reverse_complement)
-            pattern.build_matchtable_nset(parse_fasta_noheader(args.nset), reverse_complement)
+            pattern.build_matchtable_pset(parse_fasta(args.pset), reverse_complement)
+            pattern.build_matchtable_nset(parse_fasta(args.nset), reverse_complement)
             pattern_set.add(pattern)
 
     pattern_scoring = PatternScoring(args.sp)
@@ -101,30 +101,43 @@ def main():
     cluster_pfm = {}
     logger.info('merging patterns and calculating PFMs')
 
-    with open(os.path.join(args.out, 'clustered_patterns.txt'), 'w') as fo, \
-            open(os.path.join(args.out, 'merged_patterns.txt'), 'w') as fo2, \
-            open(os.path.join(args.out, 'match_sequences.txt'), 'w') as fo3:
-        fo.write('cluster: pattern\n')
-        fo2.write('cluster: strand pattern\n')
-        fo3.write('cluster: sequence\n')
+    with open(os.path.join(args.out, 'clustered_patterns.txt'), 'w') as fo_clu, \
+            open(os.path.join(args.out, 'merged_patterns.txt'), 'w') as fo_mer, \
+            open(os.path.join(args.out, 'match_sequences.txt'), 'w') as fo_mth:
+        fo_clu.write('\t'.join(['cluster_no', 'pattern\n']))
+        fo_mer.write('\t'.join(['cluster_no', 'strand', 'pattern\n']))
+        fo_mth.write('\t'.join(['cluster_no', 'gene_name', 'start', 'sequence', 'strand\n']))
+        # fo_mth.write('cluster: sequence\n')
 
         for i, j in cluster.results.iteritems():
             for p in j:
-                fo.write('{0}: {1}\n'.format(i, p.sequence))
-                fo.flush()
+                fo_clu.write('\t'.join([str(i), p.sequence.upper()]))
+                fo_clu.write('\n')
+                fo_clu.flush()
 
             merged = merge_patterns(j, reverse_complement)
-            match_sequences = merged.extract_match_sequences(args.pset)
+            match_sequences = merged.extract_match_info(args.pset)
 
             for p in merged.patterns:
-                fo2.write('{0}: {1} {2}\n'.format(i, merged._strands.get(p), p.sequence))
-                fo2.flush()
+                strand = merged._strands.get(p)
+                if strand == 1:
+                    strand = '+'
+                else:
+                    strand = '-'
+                fo_mer.write('\t'.join([str(i), strand, p.sequence.upper()]))
+                fo_mer.write('\n')
+                fo_mer.flush()
 
-            for s in match_sequences:
-                fo3.write('{0}: {1}\n'.format(i, s))
-                fo3.flush()
+            for gene_name, strand, start, seq in match_sequences:
+                if strand == 1:
+                    strand = '+'
+                else:
+                    strand = '-'
+                fo_mth.write('\t'.join([str(i), gene_name, str(start), seq.upper(), strand]))
+                fo_mth.write('\n')
+                fo_mth.flush()
 
-            cluster_pfm.update({i: pfm(match_sequences)})
+            cluster_pfm.update({i: pfm([x[3] for x in match_sequences])})
 
     for i, j in cluster_pfm.iteritems():
         with open(os.path.join(args.out, 'cluster_{0}.pfm.txt'.format(i)), 'w') as fo:

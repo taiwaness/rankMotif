@@ -41,15 +41,15 @@ def pfm(pattern_sequence):
     return matrix
 
 
-def simpfm(pfm_1, pfm_2, gc_content, max_wsize='auto', reverse_complement=False):
+def simpfm(pfm_1, pfm_2, gc_content, max_wsize=None, reverse_complement=False):
     """Calculate the similarity scores of two PFMs and return the top one"""
     len_pfm_1 = len(pfm_1.get('a'))
     len_pfm_2 = len(pfm_2.get('a'))
 
-    assert max_wsize == 'auto' or max_wsize > 0
+    assert not max_wsize or max_wsize > 0
 
     min_pfm_len = min(len_pfm_1, len_pfm_2)
-    if max_wsize == 'auto' or max_wsize > min_pfm_len:
+    if not max_wsize or max_wsize > min_pfm_len:
         max_wsize = min_pfm_len - 2
     alnlen = len_pfm_1 + len_pfm_2 - max_wsize
     max_score = 0

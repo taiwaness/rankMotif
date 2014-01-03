@@ -48,10 +48,10 @@ def parse_fasta(handle):
         elif line[0] == '>':
             if header and sequence:
                 yield (header, ''.join(sequence))
-                header = line[1:]
+                header = line[1:].split(' ')[0]
                 sequence = []
             else:
-                header = line[1:]
+                header = line[1:].split(' ')[0]
         else:
             sequence.append(line)
 
