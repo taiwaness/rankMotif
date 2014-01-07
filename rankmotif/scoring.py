@@ -62,7 +62,7 @@ class PositionScoring(object):
                 if seqid in scores:
                     for i, j in self.matrix.get(seqid).iteritems():
                         if i in scores.get(seqid):
-                            self.matrix.get(seqid)[i] *= scores.get(seqid).get(i)
+                            self.matrix.get(seqid)[i] *= 1 - scores.get(seqid).get(i)
 
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
