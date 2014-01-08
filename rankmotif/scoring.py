@@ -145,7 +145,7 @@ def parse_nucleosome_occupancy(fpath):
         if seqid in scores:
             scores.get(seqid).update({index: score})
         else:
-            scores.update({seqid: {}})
+            scores.update({seqid: {index: score}})
 
     fi.close()
 
