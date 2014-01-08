@@ -113,7 +113,7 @@ class NucleosomeOccupancyScoring(object):
                 if scores.get(seqid):
                     for index in indices:
                         for i in index:
-                            s.append(scores.get(seqid).get(i))
+                            s.append(1 - scores.get(seqid).get(i))
             self.results.update({pattern: float(sum(s)) / len(s)})
 
         return self
