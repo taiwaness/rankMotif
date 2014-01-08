@@ -144,12 +144,11 @@ class PatternScoring(object):
             self._noscore.build(pattern_set, nuclocc, append)
 
         for pattern, score in self._poccur.results.iteritems():
+            pattern_score = score
+            pattern_score *= self._pscore.results.get(pattern) ** self.sp_weight
             if nuclocc:
-                noscore = self._noscore.results.get(pattern)
-            else:
-                noscore = 1
-            pattern_score = score * (self._pscore.results.get(pattern) ** self.sp_weight) \
-                * (noscore ** self.sn_weight)
+                pattern_score *= self._noscore.results.get(pattern) ** self.sn_weight
+
             self.results.update({pattern: pattern_score})
 
         return self
