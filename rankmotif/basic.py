@@ -174,6 +174,7 @@ class MergePattern(object):
 
     def extract_match_info(self, fasta_handle):
         pos_matches = {}
+        seq_matches = {}
         match_info = []
 
         for pattern in self._strands:
@@ -183,17 +184,28 @@ class MergePattern(object):
         for pattern in self._strands:
             for seqid, pos in pattern.matchtable_pset.pos_matches.iteritems():
                 for i, j in enumerate(pos):
-                    if seqid in pos_matches and j in pos_matches.get(seqid):
-                        continue
                     gene_name = pattern.matchtable_pset.gene_name.get(seqid)
                     match_strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
                     match_start = pattern.matchtable_pset.pos_matches.get(seqid)[i][0] + 1
                     if match_strand == 2:
                         match_sequence = revcomp(match_sequence)
+
+                    tj = tuple(j)
+                    if seqid in pos_matches and tj in pos_matches.get(seqid) and match_sequence in seq_matches.get(seqid).get(tj):
+                        continue
+
                     if seqid in pos_matches:
-                        pos_matches.get(seqid).append(j)
+                        pos_matches.get(seqid).append(tj)
                     else:
-                        pos_matches.update({seqid: [j]})
+                        pos_matches.update({seqid: [tj]})
+
+                    if seqid in seq_matches:
+                        if tj in seq_matches.get(seqid):
+                            seq_matches.get(seqid).get(tj).append(match_sequence)
+                        else:
+                            seq_matches.get(seqid).update({tj: [match_sequence]})
+                    else:
+                        seq_matches.update({seqid: {tj: [match_sequence]}})
 
                     match_info.append((gene_name, match_strand, match_start, match_sequence))
 
