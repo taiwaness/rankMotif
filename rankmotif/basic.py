@@ -36,7 +36,6 @@ class MatchTable(object):
     class _MatchPosition(object):
 
         def __init__(self):
-            self.id = 0
             self.seqid = set()
             self.pos_matches = {}
             self.pos_wildcards = {}
@@ -44,9 +43,7 @@ class MatchTable(object):
             self.match_sequences = {}
             self.gene_name = {}
 
-        def add(self, gene_name, query, hit, hit_start, hit_end, is_rc_match):
-            seqid = self.id
-            self.id += 1
+        def add(self, gene_name, seqid, query, hit, hit_start, hit_end, is_rc_match):
             self.seqid.add(seqid)
             self.gene_name.update({seqid: gene_name})
             self.pos_matches.update({seqid: []})
@@ -89,7 +86,9 @@ class MatchTable(object):
             sequence.replace('n', '[atcg]'), rc_sequence.replace('n', '[atcg]')),
             re.IGNORECASE)
 
-        for h, i in seqset:
+        seqid = 0
+        for gene_name, i in seqset:
+            seqid += 1
             i = i.lower()
             self.n_seqs += 1
             has_match = False
@@ -99,13 +98,13 @@ class MatchTable(object):
                 if self.reverse_complement:
                     if j.group(1):
                         self._match_position.add(
-                            h, sequence, i, j.start(), j.end(), False)
+                            gene_name, seqid, sequence, i, j.start(), j.end(), False)
                     elif j.group(2):
                         self._match_position.add(
-                            h, rc_sequence, i, j.start(), j.end(), True)
+                            gene_name, seqid, rc_sequence, i, j.start(), j.end(), True)
                 elif j.group(1):
                     self._match_position.add(
-                        h, sequence, i, j.start(), j.end(), False)
+                        gene_name, seqid, sequence, i, j.start(), j.end(), False)
             if has_match:
                 self.n_hitseqs += 1
 
