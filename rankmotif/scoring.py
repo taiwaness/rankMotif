@@ -109,7 +109,7 @@ class NucleosomeOccupancyScoring(object):
         scores = parse_nucleosome_occupancy(nuclocc)
         for pattern in pattern_set:
             s = []
-            for seqid, indices in pattern.matchtable_pset.pos_nonwildcards.iteritems():
+            for seqid, indices in pattern.matchtable_pset.pos_matches.iteritems():
                 if scores.get(seqid):
                     for index in indices:
                         for i in index:
