@@ -98,7 +98,7 @@ class NucleosomeOccupancyScoring(object):
         self._logger = logging.getLogger(self.__class__.__name__)
         self.results = {}
 
-    def build(self, pattern_set, nuclocc=None, append=False):
+    def build(self, pattern_set, score_file=None, append=False):
         assert isinstance(pattern_set, PatternSet)
 
         self._logger.info('building scores')
@@ -106,7 +106,7 @@ class NucleosomeOccupancyScoring(object):
         if not append:
             self.results = {}
 
-        scores = parse_nucleosome_occupancy(nuclocc)
+        scores = parse_base_score(score_file, scale=True)
         for pattern in pattern_set:
             s = []
             for seqid, indices in pattern.matchtable_pset.pos_matches.iteritems():
@@ -119,17 +119,48 @@ class NucleosomeOccupancyScoring(object):
         return self
 
 
+class ConservationScoring(object):
+    """Calculate the conservation scores of the pattern(s)"""
+
+    def __init__(self):
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self.results = {}
+
+    def build(self, pattern_set, score_file=None, append=False):
+        assert isinstance(pattern_set, PatternSet)
+
+        self._logger.info('building scores')
+
+        if not append:
+            self.results = {}
+
+        scores = parse_base_score(score_file, scale=False)
+        for pattern in pattern_set:
+            s = []
+            for seqid, indices in pattern.matchtable_pset.pos_matches.iteritems():
+                if scores.get(seqid):
+                    for index in indices:
+                        for i in index:
+                            if scores.get(seqid).get(i):
+                                s.append(scores.get(seqid).get(i))
+            self.results.update({pattern: float(sum(s)) / len(s)})
+
+        return self
+
+
 class PatternScoring(object):
 
-    def __init__(self, sp_weight=1, sn_weight=1):
+    def __init__(self, sp_weight=1, sn_weight=1, sc_weight=1):
         self.results = {}
         self.sp_weight = sp_weight
         self.sn_weight = sn_weight
+        self.sc_weight = sc_weight
         self._poccur = PreferentialOccurrence()
         self._pscore = PositionScoring()
         self._noscore = NucleosomeOccupancyScoring()
 
-    def build(self, pattern_set, append=False, seqmask=False, nuclocc=None):
+    def build(self, pattern_set, append=False, seqmask=False, nuclocc=None,
+              consv=None):
         assert isinstance(pattern_set, PatternSet)
 
         if not append:
@@ -137,25 +168,30 @@ class PatternScoring(object):
             self._poccur = PreferentialOccurrence()
             self._pscore = PositionScoring()
             self._noscore = NucleosomeOccupancyScoring()
+            self._csscore = ConservationScoring()
 
         self._poccur.build(pattern_set, append)
         self._pscore.build(pattern_set, append, seqmask)
         if nuclocc:
-            self._noscore.build(pattern_set, nuclocc, append)
+            self._noscore.build(pattern_set, score_file=nuclocc, append=append)
+        if consv:
+            self._csscore.build(pattern_set, score_file=consv, append=append)
 
         for pattern, score in self._poccur.results.iteritems():
             pattern_score = score
             pattern_score *= self._pscore.results.get(pattern) ** self.sp_weight
             if nuclocc:
                 pattern_score *= self._noscore.results.get(pattern) ** self.sn_weight
+            if consv:
+                pattern_score *= self._csscore.results.get(pattern) ** self.sc_weight
 
             self.results.update({pattern: pattern_score})
 
         return self
 
 
-def parse_nucleosome_occupancy(fpath):
-    """Parse the nucleosome occupancy scores data"""
+def parse_base_score(fpath, scale=False):
+    """Parse the base-based score data"""
     if isinstance(fpath, str):
         fi = open(fpath, 'r')
     else:
@@ -175,12 +211,13 @@ def parse_nucleosome_occupancy(fpath):
     fi.close()
 
     # Scale score range to [0, 1]
-    for seqid, score in scores.iteritems():
-        values = score.values()
-        min_score = min(values)
-        max_score = max(values)
-        interval = max_score - min_score
-        for i, j in score.iteritems():
-            score[i] = (j - min_score) / interval
+    if scale:
+        for seqid, score in scores.iteritems():
+            values = score.values()
+            min_score = min(values)
+            max_score = max(values)
+            interval = max_score - min_score
+            for i, j in score.iteritems():
+                score[i] = (j - min_score) / interval
 
     return scores

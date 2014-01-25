@@ -21,7 +21,8 @@ from rankmotif.seqio import parse_fasta
 
 def main():
     parser = argparse.ArgumentParser(prog='rankMotif',
-                                     description='Given a motif list, rankMotif will output the top-k motifs'
+                                     description='Given a motif list, '
+                                     'rankMotif will output the top-k motifs'
                                      'without redundancy.')
     parser.add_argument('-pset', required=True, metavar='<file>',
                         help='positive set of Chip-Chip sequences in FASTA format')
@@ -37,11 +38,15 @@ def main():
     #                     help='Number of CPUs to perform the analysis (default: 1)')
     parser.add_argument('-oc', metavar='<file>',
                         help='support of nucleosome occupancy scores')
+    parser.add_argument('-cs', metavar='<file>',
+                        help='support of conservation scores')
     parser.add_argument('-sp', type=int, default=1, metavar='<int>',
                         help='weight of position scoring (default: 1)')
     parser.add_argument('-sn', type=int, default=1, metavar='<int>',
                         help='weight of nucleosome occupancy scoring. '
                         'This option is valid only when -oc is specified. (default: 1)')
+    parser.add_argument('-sc', type=int, default=1, metavar='<int>',
+                        help='weight of conservation scoring (default: 1)')
     parser.add_argument('-nc', type=int, default=5, metavar='<int>',
                         help='maximum number of clusters in the output (default: 5)')
     parser.add_argument('-np', type=int, default=5, metavar='<int>',
@@ -95,8 +100,9 @@ def main():
             pattern.build_matchtable_nset(parse_fasta(args.nset), reverse_complement)
             pattern_set.add(pattern)
 
-    pattern_scoring = PatternScoring(sp_weight=args.sp, sn_weight=args.sn)
-    pattern_scoring.build(pattern_set, seqmask=seqmask, nuclocc=args.oc)
+    pattern_scoring = PatternScoring(sp_weight=args.sp, sn_weight=args.sn,
+                                     sc_weight=args.sc)
+    pattern_scoring.build(pattern_set, seqmask=seqmask, nuclocc=args.oc, consv=args.cs)
 
     cluster = Cluster(args.nc, 0.8, args.np, args.ws, reverse_complement)
     cluster.run(pattern_scoring, gc=args.gc, pset=args.pset)
