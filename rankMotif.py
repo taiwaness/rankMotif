@@ -7,7 +7,7 @@
 #
 # Author: Jian-Long Huang <jianlong@ntu.edu.tw>
 
-__version__ = '1.2'
+__version__ = '1.3'
 
 import os
 import sys

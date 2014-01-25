@@ -1,17 +1,22 @@
-1.2b  2013-12-13  Jian-Long Huang <jianlong@ntu.edu.tw>
+1.3  2013-12-13  Jian-Long Huang  <jlhgln@gmail.com>
 
-	* New option: applying nucleosome occupancy scores (-oc)
+        * Add new options: -cs and -sc for conservation scoring
+        * Fix occupancy scoring
+        * Fix the seqid that affect the mi and occupancy scoring
 
-	* New options for PFM similarity calculation: -ws and -gc
+1.2b  2013-12-13  Jian-Long Huang  <jlhgln@gmail.com>
 
-1.1  2013-12-08  Jian-Long Huang  <jianlong@ntu.edu.tw>
+        * New option: applying nucleosome occupancy scores (-oc)
+        * New options for PFM similarity calculation: -ws and -gc
+
+1.1  2013-12-08  Jian-Long Huang  <jlhgln@gmail.com>
 
         * Change the command-line arguments:
-          (1) -cluster to -nc
-          (2) -n to -np
+            (1) -cluster to -nc
+            (2) -n to -np
 
         * New option: applying sequence mask (-seqmask).
 
-1.0  2013-11-19  Jian-Long Huang  <jianlong@ntu.edu.tw>
+1.0  2013-11-19  Jian-Long Huang  <jlhgln@gmail.com>
 
         * Implement basic features.
