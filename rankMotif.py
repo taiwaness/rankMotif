@@ -39,6 +39,9 @@ def main():
                         help='support of nucleosome occupancy scores')
     parser.add_argument('-sp', type=int, default=1, metavar='<int>',
                         help='weight of position scoring (default: 1)')
+    parser.add_argument('-sn', type=int, default=1, metavar='<int>',
+                        help='weight of nucleosome occupancy scoring. '
+                        'This option is valid only when -oc is specified. (default: 1)')
     parser.add_argument('-nc', type=int, default=5, metavar='<int>',
                         help='maximum number of clusters in the output (default: 5)')
     parser.add_argument('-np', type=int, default=5, metavar='<int>',
@@ -92,7 +95,7 @@ def main():
             pattern.build_matchtable_nset(parse_fasta(args.nset), reverse_complement)
             pattern_set.add(pattern)
 
-    pattern_scoring = PatternScoring(args.sp)
+    pattern_scoring = PatternScoring(sp_weight=args.sp, sn_weight=args.sn)
     pattern_scoring.build(pattern_set, seqmask=seqmask, nuclocc=args.oc)
 
     cluster = Cluster(args.nc, 0.8, args.np, args.ws, reverse_complement)
