@@ -200,6 +200,8 @@ def parse_base_score(fpath, scale=False):
     scores = {}
     for line in fi:
         data = line.strip().split('\t')
+        if data[4] == '-':
+            continue
         seqid = int(data[0])
         index = int(data[1]) - 1
         score = float(data[4])
