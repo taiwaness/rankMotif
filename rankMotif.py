@@ -7,7 +7,7 @@
 #
 # Author: Jian-Long Huang <jianlong@ntu.edu.tw>
 
-__version__ = '1.4'
+__version__ = '1.5'
 
 import os
 import sys
@@ -114,7 +114,7 @@ def main():
             open(os.path.join(args.out, 'merged_patterns.txt'), 'w') as fo_mer, \
             open(os.path.join(args.out, 'match_sequences.txt'), 'w') as fo_mth:
         fo_clu.write('\t'.join(['cluster_no', 'pattern', 'pset_support\n']))
-        fo_mer.write('\t'.join(['cluster_no', 'strand', 'pattern\n']))
+        fo_mer.write('\t'.join(['cluster_no', 'strand', 'pattern', 'pset_support\n']))
         fo_mth.write('\t'.join(['cluster_no', 'gene_name', 'start', 'sequence', 'strand\n']))
         # fo_mth.write('cluster: sequence\n')
 
@@ -139,7 +139,8 @@ def main():
                     strand = '+'
                 else:
                     strand = '-'
-                fo_mer.write('\t'.join([str(i), strand, p.sequence.upper()]))
+                pset_support = float(p.matchtable_pset.n_hitseqs) / p.matchtable_pset.n_seqs
+                fo_mer.write('\t'.join([str(i), strand, p.sequence.upper(), str(round(pset_support, 2))]))
                 fo_mer.write('\n')
                 fo_mer.flush()
 

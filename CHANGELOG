@@ -1,22 +1,33 @@
+1.5  2014-03-19  Jian-Long Haung <jianlong@ntu.edu.tw>
+
+	* Add positive set support information to
+	'merged_patterns' file.
+
+
 1.4  2014-02-27  Jian-Long Huang  <jianlong@ntu.edu.tw>
+
 	* Enhancement of parsing conservation score file.
 	When parsing the conservation score (-cs), if
 	the score is a dash ('-'), that means it's value
 	is NA and will be omitted.
+
 	* Add positive set support information (number
 	of genes with pattern existence / number of total genes)
 	to 'clustered_patterns.txt' file.
 
 1.3  2013-12-13  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
-        * Add new options: -cs and -sc for conservation scoring.
-        * Fix occupancy scoring.
-        * Fix the seqid that affect the mi and occupancy scoring.
+	* Add new options: -cs and -sc for conservation scoring.
+
+	* Fix occupancy scoring.
+
+	* Fix the seqid that affect the mi and occupancy scoring.
 
 1.2b  2013-12-13  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
-        * New option: applying nucleosome occupancy scores (-oc).
-        * New options for PFM similarity calculation: -ws and -gc.
+	* New option: applying nucleosome occupancy scores (-oc).
+
+	* New options for PFM similarity calculation: -ws and -gc.
 
 1.1  2013-12-08  Jian-Long Huang  <jianlong@ntu.edu.tw>
 
