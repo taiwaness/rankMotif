@@ -46,10 +46,11 @@ class MatchTable(object):
         def add(self, gene_name, seqid, query, hit, hit_start, hit_end, is_rc_match):
             self.seqid.add(seqid)
             self.gene_name.update({seqid: gene_name})
-            self.pos_matches.update({seqid: []})
-            self.pos_wildcards.update({seqid: []})
-            self.pos_nonwildcards.update({seqid: []})
-            self.match_sequences.update({seqid: []})
+            if seqid not in self.pos_matches:
+                self.pos_matches.update({seqid: []})
+                self.pos_wildcards.update({seqid: []})
+                self.pos_nonwildcards.update({seqid: []})
+                self.match_sequences.update({seqid: []})
             self.pos_matches.get(seqid).append([i for i in xrange(hit_start, hit_end)])
             pos_wildcards = []
             pos_nonwildcards = []
@@ -82,7 +83,7 @@ class MatchTable(object):
             self.n_seqs = 0
 
         rc_sequence = revcomp(sequence)
-        p = re.compile('({0})|({1})'.format(
+        p = re.compile('(?=({0})|({1}))'.format(
             sequence.replace('n', '[atcg]'), rc_sequence.replace('n', '[atcg]')),
             re.IGNORECASE)
 
@@ -98,13 +99,13 @@ class MatchTable(object):
                 if self.reverse_complement:
                     if j.group(1):
                         self._match_position.add(
-                            gene_name, seqid, sequence, i, j.start(), j.end(), False)
+                            gene_name, seqid, sequence, i, j.start(), j.start() + len(j.group(1)), False)
                     elif j.group(2):
                         self._match_position.add(
-                            gene_name, seqid, rc_sequence, i, j.start(), j.end(), True)
+                            gene_name, seqid, rc_sequence, i, j.start(), j.start() + len(j.group(2)), True)
                 elif j.group(1):
                     self._match_position.add(
-                        gene_name, seqid, sequence, i, j.start(), j.end(), False)
+                        gene_name, seqid, sequence, i, j.start(), j.start() + len(j.group(1)), False)
             if has_match:
                 self.n_hitseqs += 1
 
@@ -173,8 +174,7 @@ class MergePattern(object):
         self._strands.update({pattern: strand})
 
     def extract_match_info(self, fasta_handle):
-        pos_matches = {}
-        seq_matches = {}
+        matches = set()
         match_info = []
 
         for pattern in self._strands:
@@ -187,25 +187,15 @@ class MergePattern(object):
                     gene_name = pattern.matchtable_pset.gene_name.get(seqid)
                     match_strand, match_sequence = pattern.matchtable_pset.match_sequences.get(seqid)[i]
                     match_start = pattern.matchtable_pset.pos_matches.get(seqid)[i][0] + 1
-                    if match_strand == 2:
-                        match_sequence = revcomp(match_sequence)
 
-                    tj = tuple(j)
-                    if seqid in pos_matches and tj in pos_matches.get(seqid) and match_sequence in seq_matches.get(seqid).get(tj):
+                    match = (seqid, match_strand, tuple(j))
+                    if match in matches:
                         continue
 
-                    if seqid in pos_matches:
-                        pos_matches.get(seqid).append(tj)
-                    else:
-                        pos_matches.update({seqid: [tj]})
+                    matches.add(match)
 
-                    if seqid in seq_matches:
-                        if tj in seq_matches.get(seqid):
-                            seq_matches.get(seqid).get(tj).append(match_sequence)
-                        else:
-                            seq_matches.get(seqid).update({tj: [match_sequence]})
-                    else:
-                        seq_matches.update({seqid: {tj: [match_sequence]}})
+                    if match_strand == 2:
+                        match_sequence = revcomp(match_sequence)
 
                     match_info.append((gene_name, match_strand, match_start, match_sequence))
 

@@ -1,8 +1,19 @@
+1.7  2014-05-13  Jian-Long Huang <jianlong@ntu.edu.tw>
+
+	* Fix the bug of adding the matching information.
+
+	* Fix the string consumption when scanning matched sequences
+	for a pattern. The overlapping sites will be retained now.
+
+1.6  2014-04-25  Jian-Long Huang <jianlong@ntu.edu.tw>
+
+	* Add the positive set supports information for each
+	cluster to 'cluster_support.txt'
+
 1.5  2014-03-19  Jian-Long Haung <jianlong@ntu.edu.tw>
 
 	* Add positive set support information to
 	'merged_patterns' file.
-
 
 1.4  2014-02-27  Jian-Long Huang  <jianlong@ntu.edu.tw>
 

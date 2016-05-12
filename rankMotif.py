@@ -7,7 +7,7 @@
 #
 # Author: Jian-Long Huang <jianlong@ntu.edu.tw>
 
-__version__ = '1.5'
+__version__ = '1.6'
 
 import os
 import sys
@@ -30,9 +30,9 @@ def main():
                         help='negative set of Chip-Chip sequences in FASTA format')
     parser.add_argument('-plist', required=True, metavar='<file>',
                         help='pattern list file')
-    parser.add_argument('-seqtype', required=True, choices=['dna', 'rna'],
-                        help='sequence type of the patterns')
-    parser.add_argument('-out', required=True, metavar='<file>',
+    parser.add_argument('-seqtype', required=True, metavar='(dna|rna)', choices=['dna', 'rna'],
+                        help='sequence type of the patterns (dna or rna)')
+    parser.add_argument('-out', required=True, metavar='<dir>',
                         help='output directory')
     # parser.add_argument('-cpu', type=int, default=1,
     #                     help='Number of CPUs to perform the analysis (default: 1)')
@@ -108,6 +108,8 @@ def main():
     cluster.run(pattern_scoring, gc=args.gc, pset=args.pset)
 
     cluster_pfm = {}
+    merseq_support = {}
+    pset_n_seqs = 0
     logger.info('merging patterns and calculating PFMs')
 
     with open(os.path.join(args.out, 'clustered_patterns.txt'), 'w') as fo_clu, \
@@ -118,9 +120,12 @@ def main():
         fo_mth.write('\t'.join(['cluster_no', 'gene_name', 'start', 'sequence', 'strand\n']))
         # fo_mth.write('cluster: sequence\n')
 
+        merseq_support = {}
         for i, j in cluster.results.iteritems():
             for p in j:
                 pset_support = float(p.matchtable_pset.n_hitseqs) / p.matchtable_pset.n_seqs
+                pset_n_seqs = p.matchtable_pset.n_seqs
+
                 fo_clu.write('\t'.join([
                     str(i),
                     p.sequence.upper(),
@@ -140,6 +145,12 @@ def main():
                 else:
                     strand = '-'
                 pset_support = float(p.matchtable_pset.n_hitseqs) / p.matchtable_pset.n_seqs
+
+                if i in merseq_support:
+                    merseq_support[i] |= set(p.matchtable_pset.match_sequences.keys())
+                else:
+                    merseq_support.update({i: set(p.matchtable_pset.match_sequences.keys())})
+
                 fo_mer.write('\t'.join([str(i), strand, p.sequence.upper(), str(round(pset_support, 2))]))
                 fo_mer.write('\n')
                 fo_mer.flush()
@@ -162,6 +173,12 @@ def main():
                 fo.write('\t'.join([str(i) for i in j.get(base)]))
                 fo.write('\n')
                 fo.flush()
+
+    with open(os.path.join(args.out, 'cluster_support.txt'), 'w') as fo:
+        fo.write('\t'.join(['cluster_no', 'pset_support\n']))
+        for i, j in merseq_support.iteritems():
+            fo.write('{0}\t{1}\n'.format(i, round(float(len(j)) / pset_n_seqs, 2)))
+            fo.flush()
 
     logger.info('Job has finished.')
 
